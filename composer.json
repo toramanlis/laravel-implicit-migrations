@@ -1,0 +1,31 @@
+{
+    "name": "toramanlis/implicit-migrations",
+    "description": "A command to create migrations by Doctrine ORM decorators in models",
+    "type": "library",
+    "require": {
+        "doctrine/dbal": "^4.1",
+        "doctrine/orm": "^3.2",
+        "symfony/cache": "^7.1",
+        "laravel/framework": "~11.20"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Toramanlis\\ImplicitMigrations\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Timucin",
+            "email": "timucinbahsi@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Toramanlis\\ImplicitMigrations\\Providers\\ImplicitMigrationsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev"
+}
