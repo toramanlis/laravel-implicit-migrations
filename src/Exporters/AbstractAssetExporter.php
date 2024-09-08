@@ -82,7 +82,10 @@ abstract class AbstractAssetExporter
             $items[] = is_array($export) ? static::joinExports($export) : $export;
         }
 
-        return implode("\n", array_filter($items));
+        $test = array_filter($items, function ($item) {
+            return null === $item ? true : !empty($item);
+        });
+        return implode("\n", $test);
     }
 
     protected static function exportParameters(array $parameters): string

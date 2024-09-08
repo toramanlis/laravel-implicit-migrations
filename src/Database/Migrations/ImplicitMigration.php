@@ -1,6 +1,6 @@
 <?php
 
-namespace Toramanlis\ImplicitMigrations\Migration;
+namespace Toramanlis\ImplicitMigrations\Database\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
@@ -9,10 +9,12 @@ use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Table;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Config;
-use Toramanlis\ImplicitMigrations\Schemas\DroppableTable;
 
 abstract class ImplicitMigration extends Migration
 {
+    public const MODE_CREATE = 'create';
+    public const MODE_UPDATE = 'update';
+
     protected const TABLE_NAME = '';
 
     protected const DRIVER_MAP = [
@@ -22,6 +24,8 @@ abstract class ImplicitMigration extends Migration
         'sqlsrv' => 'pdo_sqlsrv',
     ];
 
+    protected static $mode = '';
+
     protected Connection $connectionInterface;
 
     protected AbstractSchemaManager $schemaManager;
@@ -30,7 +34,7 @@ abstract class ImplicitMigration extends Migration
 
     abstract public function tableUp(Table $table): void;
 
-    abstract public function tableDown(DroppableTable $table): void;
+    abstract public function tableDown(Table $table): void;
 
     public function __construct()
     {
@@ -82,30 +86,30 @@ abstract class ImplicitMigration extends Migration
 
     public function up()
     {
-        if ($this->schemaManager->tableExists(static::TABLE_NAME)) {
+        if (static::MODE_CREATE === static::$mode) {
+            $createdTable = new Table(static::TABLE_NAME);
+            $this->tableUp($createdTable);
+            $this->executeStatements($this->platform->getCreateTableSQL($createdTable));
+        } else {
             $existingTable = $this->schemaManager->introspectTable(static::TABLE_NAME);
             $alteredTable = clone $existingTable;
             $this->tableUp($alteredTable);
 
             $this->applyDifference($existingTable, $alteredTable);
-        } else {
-            $createdTable = new Table(static::TABLE_NAME);
-            $this->tableUp($createdTable);
-            $this->executeStatements($this->platform->getCreateTableSQL($createdTable));
         }
     }
 
     public function down()
     {
         $existingTable = $this->schemaManager->introspectTable(static::TABLE_NAME);
-        $revertedTable = new DroppableTable($existingTable);
+        $revertedTable = clone $existingTable;
 
         $this->tableDown($revertedTable);
+        $this->applyDifference($existingTable, $revertedTable);
+    }
 
-        if ($revertedTable->isDropped()) {
-            $this->connectionInterface->executeStatement($this->platform->getDropTableSQL(static::TABLE_NAME));
-        } else {
-            $this->applyDifference($existingTable, $revertedTable);
-        }
+    protected function dropTable()
+    {
+        $this->connectionInterface->executeStatement($this->platform->getDropTableSQL(static::TABLE_NAME));
     }
 }

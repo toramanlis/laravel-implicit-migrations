@@ -15,16 +15,18 @@ class TableExporter extends AbstractAssetExporter
     {
         return static::joinExports([
             $this->exportColumns(),
+            null,
             $this->exportIndexes(),
             $this->exportUniqueConstraints(),
             $this->exportForeignKeyConstraints(),
+            null,
             $this->exportOptions(),
         ]);
     }
 
     public function exportDrop(): string
     {
-        return "\$table->drop();";
+        return '$this->dropTable();';
     }
 
     /** @return array<string>  */

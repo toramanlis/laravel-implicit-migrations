@@ -10,8 +10,7 @@ use ReflectionClass;
 use SplFileInfo;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Toramanlis\ImplicitMigrations\Generator\MigrationGenerator;
-use Toramanlis\ImplicitMigrations\Migration\ImplicitMigration;
-use Illuminate\Support\Str;
+use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
 
 #[AsCommand(name: 'implicit-migrations:generate')]
 class GenerateMigrationCommand extends Command
@@ -44,6 +43,12 @@ class GenerateMigrationCommand extends Command
 
         foreach ($this->modelNames as $modelFile => $modelName) {
             $migrationContents = $generator->generate($modelName);
+
+            if (null === $migrationContents) {
+                echo "\tModel {$modelName} has no changes.\n";
+                continue;
+            }
+
             $migrationPath = $this->generateMigrationFilePath((new $modelName())->getTable(), $modelFile);
 
             if (file_exists($migrationPath)) {
@@ -93,16 +98,18 @@ class GenerateMigrationCommand extends Command
             $iterator = new FilesystemIterator($migrationPath, FilesystemIterator::SKIP_DOTS);
             foreach ($iterator as $migrationFile) {
                 /** @var SplFileInfo $migrationFile */
-                $migration = include($migrationFile->getRealPath());
+                $fileName = $migrationFile->getRealPath();
+                $migration = include($fileName);
 
                 if (!$migration instanceof ImplicitMigration) {
                     continue;
                 }
 
-                $implicitMigrations[] = $migration;
+                $implicitMigrations[$fileName] = $migration;
             }
         }
 
+        ksort($implicitMigrations, SORT_STRING);
         return $implicitMigrations;
     }
 
@@ -110,7 +117,7 @@ class GenerateMigrationCommand extends Command
     {
         static $nonce = 0;
 
-        $fileName = date('Y_m_d_His') . '_' . ++$nonce . "_implicit_migration_{$tableName}.php";
+        $fileName = date('Y_m_d_His') . '_' . $nonce++ . "_implicit_migration_{$tableName}.php";
 
         $targetPath = database_path('migrations');
 

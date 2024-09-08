@@ -17,11 +17,18 @@ class ColumnDiffExporter extends AbstractAssetExporter
             return '';
         }
 
+        if ('Name' === $optionName) {
+            return '$table->renameColumn(' . static::exportParameters([
+                $this->asset->getOldColumn()->getName(),
+                $this->asset->getNewColumn()->getName(),
+            ]) . ');';
+        }
+
         $getter = "get{$optionName}";
         $setter = "set{$optionName}";
 
-        return "\$table->getColumn(" . static::varExport($this->asset->getOldColumn()->getName(), true) . ")\n"
-            . "\t->{$setter}(" . static::varExport($this->asset->getNewColumn()->{"{$getter}"}(), true) . ");";
+        return "\$table->getColumn(" . static::varExport($this->asset->getOldColumn()->getName()) . ")\n"
+            . "\t->{$setter}(" . static::varExport($this->asset->getNewColumn()->{"{$getter}"}()) . ");";
     }
 
     public function exportCreate(): string

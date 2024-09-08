@@ -29,6 +29,9 @@ class TemplateManager
             "\n" => "\n{$indentation}",
         ]);
 
+        /** @var string */
+        $value = preg_replace('/\n\s+\n/', "\n\n", $value);
+
         $this->template = str_replace($placeholder, $value, $this->template);
 
         return $this;

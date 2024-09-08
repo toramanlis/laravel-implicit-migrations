@@ -10,11 +10,14 @@ use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaTool;
 use Toramanlis\ImplicitMigrations\Exporters\TableDiffExporter;
 use Toramanlis\ImplicitMigrations\Exporters\TableExporter;
-use Toramanlis\ImplicitMigrations\Migration\ImplicitMigration;
+use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
 
 /** @package Toramanlis\ImplicitMigrations\Generator */
 class MigrationGenerator
 {
+    public const MIGRATION_MODE_CREATE = 'create';
+    public const MIGRATION_MODE_UPDATE = 'update';
+
     protected TemplateManager $templateManager;
 
     /**
@@ -47,7 +50,7 @@ class MigrationGenerator
         return $table;
     }
 
-    public function generate(string $modelName)
+    public function generate(string $modelName): ?string
     {
         $dbParams = ImplicitMigration::getDbParams();
 
@@ -67,21 +70,27 @@ class MigrationGenerator
         }
 
         $schema = $schemaTool->getSchemaFromMetadata([$modelMetadata]);
-
         $tableName = $modelMetadata->getTableName();
-        $other = $schema->getTable($modelMetadata->getTableName());
 
+        $inferredTable = $schema->getTable($tableName);
         $existingTable = $this->prepareExistingTable($tableName);
 
         if (null === $existingTable) {
-            $exporter = new TableExporter($other);
+            $exporter = new TableExporter($inferredTable);
 
+            $mode = ImplicitMigration::MODE_CREATE;
             $up = $exporter->export();
-            $down = $exporter->export(TableExporter::MODE_DROP);
+            $down = TableExporter::exportAsset($inferredTable, TableExporter::MODE_DROP);
         } else {
-            $forward = $comparator->compareTables($existingTable, $other);
-            $backward = $comparator->compareTables($other, $existingTable);
+            $forward = $comparator->compareTables($existingTable, $inferredTable);
 
+            if ($forward->isEmpty()) {
+                return null;
+            }
+
+            $backward = $comparator->compareTables($inferredTable, $existingTable);
+
+            $mode = ImplicitMigration::MODE_UPDATE;
             $up = TableDiffExporter::exportAsset($forward);
             $down = TableDiffExporter::exportAsset($backward);
         }
@@ -89,6 +98,7 @@ class MigrationGenerator
 
         return $this->templateManager->process([
             'tableName' => $tableName,
+            'migrationMode' => $mode,
             'up' => $up,
             'down' => $down,
         ]);
