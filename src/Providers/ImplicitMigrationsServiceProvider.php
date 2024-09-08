@@ -18,6 +18,11 @@ class ImplicitMigrationsServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/database.php', 'database');
+        $this->mergeConfigFrom(implode(DIRECTORY_SEPARATOR, [
+            __DIR__,
+            '..',
+            'config',
+            'database.php'
+        ]), 'database');
     }
 }

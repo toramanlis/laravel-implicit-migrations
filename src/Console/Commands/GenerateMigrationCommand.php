@@ -34,7 +34,7 @@ class GenerateMigrationCommand extends Command
     public function handle()
     {
         $migrator = resolve('migrator');
-        $this->migrationPaths = $migrator->paths();
+        $this->migrationPaths = array_merge($migrator->paths(), [database_path(('migrations'))]);
         $this->modelNames = $this->argument('models') ?:
             $this->getModelNames(Config::get('database.model_paths'));
 
@@ -119,19 +119,24 @@ class GenerateMigrationCommand extends Command
 
         $fileName = date('Y_m_d_His') . '_' . $nonce++ . "_implicit_migration_{$tableName}.php";
 
-        $targetPath = database_path('migrations');
-
+        $targetPath = null;
         $modelPath = $modelFile;
-        do {
+
+        while (null === $targetPath && $modelPath) {
             $modelPath = substr($modelPath, 0, (int) strrpos($modelPath, DIRECTORY_SEPARATOR));
+            $targetDepth = 0;
 
             foreach ($this->migrationPaths as $migrationPath) {
-                if (0 === strpos($migrationPath, $modelPath)) {
+                if (0 !== strpos($migrationPath, $modelPath)) {
+                    continue;
+                }
+
+                if (null === $targetPath || count(explode(DIRECTORY_SEPARATOR, $migrationPath)) < $targetDepth) {
                     $targetPath = $migrationPath;
-                    break 2;
+                    $targetDepth = count(explode(DIRECTORY_SEPARATOR, $targetPath));
                 }
             }
-        } while ($modelPath);
+        }
 
         return $targetPath . DIRECTORY_SEPARATOR . $fileName;
     }

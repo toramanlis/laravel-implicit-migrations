@@ -2,6 +2,6 @@
 
 return [
     'model_paths' => [
-        'app/Models'
+        'app' . DIRECTORY_SEPARATOR . 'Models'
     ],
 ];

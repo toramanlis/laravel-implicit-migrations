@@ -10,16 +10,22 @@ class TemplateManager
 
     public function __construct(string $templateName)
     {
-        $templatePath = __DIR__ . '/../templates/' . $templateName;
+        $templatePath = implode(DIRECTORY_SEPARATOR, [
+            __DIR__,
+            '..',
+            'templates',
+            $templateName
+        ]);
+
         $this->template = file_get_contents(realpath($templatePath));
     }
 
-    public function substitute(string $key, string $value): static
+    public static function substitute(string $subject, string $key, string $value): string
     {
         $placeholder = "<<{$key}>>";
-        $placeholderPosition = strpos($this->template, $placeholder);
-        $previousNewlinePosition = strrpos($this->template, "\n", $placeholderPosition - strlen($this->template));
-        $afterNewline = substr($this->template, $previousNewlinePosition + 1);
+        $placeholderPosition = strpos($subject, $placeholder);
+        $previousNewlinePosition = strrpos($subject, "\n", $placeholderPosition - strlen($subject));
+        $afterNewline = substr($subject, $previousNewlinePosition + 1);
 
         preg_match('/^\s+/', $afterNewline, $matches);
         $indentation = $matches[0];
@@ -32,9 +38,7 @@ class TemplateManager
         /** @var string */
         $value = preg_replace('/\n\s+\n/', "\n\n", $value);
 
-        $this->template = str_replace($placeholder, $value, $this->template);
-
-        return $this;
+        return str_replace($placeholder, $value, $subject);
     }
 
     /**
@@ -43,10 +47,12 @@ class TemplateManager
      */
     public function process(array $data): string
     {
+        $subject = $this->template;
+
         foreach ($data as $key => $value) {
-            $this->substitute($key, $value);
+            $subject = static::substitute($subject, $key, $value);
         }
 
-        return $this->template;
+        return $subject;
     }
 }
