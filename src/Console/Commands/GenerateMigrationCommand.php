@@ -41,22 +41,21 @@ class GenerateMigrationCommand extends Command
         $migrations = $this->getImplicitMigrations();
         $generator = new MigrationGenerator(static::TEMPLATE_NAME, $migrations);
 
-        foreach ($this->modelNames as $modelFile => $modelName) {
-            $migrationContents = $generator->generate($modelName);
+        $migrationData = $generator->generate($this->modelNames);
 
-            if (null === $migrationContents) {
-                echo "\tModel {$modelName} has no changes.\n";
-                continue;
-            }
+        foreach ($migrationData as $tableName => $migrationItem) {
+            $modelName = $migrationItem['modelName'];
+            $reflection = new ReflectionClass($modelName);
+            $modelFile = $reflection->getFileName();
 
-            $migrationPath = $this->generateMigrationFilePath((new $modelName())->getTable(), $modelFile);
+            $migrationPath = $this->generateMigrationFilePath($tableName, $modelFile, $migrationItem['mode']);
 
             if (file_exists($migrationPath)) {
                 echo "\tMigration file {$migrationPath} already exists. Skipping\n";
                 continue;
             }
 
-            file_put_contents($migrationPath, $migrationContents);
+            file_put_contents($migrationPath, $migrationItem['contents']);
             echo "\tCreated migration: {$migrationPath}\n";
         }
     }
@@ -113,11 +112,14 @@ class GenerateMigrationCommand extends Command
         return $implicitMigrations;
     }
 
-    protected function generateMigrationFilePath(string $tableName, string $modelFile): string
+    protected function generateMigrationFilePath(string $tableName, string $modelFile, string $mode): string
     {
         static $nonce = 0;
 
-        $fileName = date('Y_m_d_His') . '_' . $nonce++ . "_implicit_migration_{$tableName}.php";
+        $fileName = date('Y_m_d_His') .
+            '_' .
+            $nonce++ .
+            "_implicit_migration_{$mode}_{$tableName}_table.php";
 
         $targetPath = null;
         $modelPath = $modelFile;

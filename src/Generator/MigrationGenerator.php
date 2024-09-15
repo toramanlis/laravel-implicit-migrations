@@ -3,8 +3,10 @@
 namespace Toramanlis\ImplicitMigrations\Generator;
 
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Schema\Comparator;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Mapping\ManyToManyOwningSideMapping;
 use Doctrine\ORM\Mapping\MappingException;
 use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -15,11 +17,14 @@ use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
 /** @package Toramanlis\ImplicitMigrations\Generator */
 class MigrationGenerator
 {
-    public const MIGRATION_MODE_CREATE = 'create';
-    public const MIGRATION_MODE_UPDATE = 'update';
-
+    protected EntityManager $entityManager;
+    
+    protected Comparator $comparator;
+    
+    protected SchemaTool $schemaTool;
+    
     protected TemplateManager $templateManager;
-
+    
     /**
      * @param string $templateName
      * @param array<ImplicitMigration> $existingMigrations
@@ -28,7 +33,17 @@ class MigrationGenerator
         string $templateName,
         protected array $existingMigrations
     ) {
+        $dbParams = ImplicitMigration::getDbParams();
+        
+        $config = ORMSetup::createAttributeMetadataConfiguration([]);
+        $connection = DriverManager::getConnection($dbParams, $config);
+        $schemaManager = $connection->createSchemaManager();
+        
+        $this->entityManager = new EntityManager($connection, $config);
+        $this->comparator = $schemaManager->createComparator();
+        $this->schemaTool = new SchemaTool($this->entityManager);
         $this->templateManager = new TemplateManager($templateName);
+
     }
 
     protected function prepareExistingTable($tableName)
@@ -50,29 +65,53 @@ class MigrationGenerator
         return $table;
     }
 
-    public function generate(string $modelName): ?string
+    /**
+     * @param array<string> $modelNames 
+     * @return array<string,array<string,string>>
+     */
+    public function generate(array $modelNames): array
     {
-        $dbParams = ImplicitMigration::getDbParams();
+        $skippedModels = [];
+        $modelsMetadata = [];
+        $tableModelMap = [];
+        
+        foreach ($modelNames as $modelName) {
+            try {
+                $singleModelMetadata = $this->entityManager->getClassMetadata($modelName);
+                $tableModelMap[$singleModelMetadata->getTableName()] = $modelName;
 
-        $config = ORMSetup::createAttributeMetadataConfiguration([]);
-        $connection = DriverManager::getConnection($dbParams, $config);
-        $entityManager = new EntityManager($connection, $config);
-        $schemaManager = $connection->createSchemaManager();
-        $comparator = $schemaManager->createComparator();
+                foreach ($singleModelMetadata->getAssociationMappings() as $mapping) {
+                    if ($mapping instanceof ManyToManyOwningSideMapping) {
+                        $tableModelMap[$mapping->joinTable->name] = $modelName;
+                    }
+                }
+                $modelsMetadata[] = $singleModelMetadata;
+            } catch (MappingException $e) {
+                $skippedModels[] = $modelName;
+            }
+        }
+        
+        $schema = $this->schemaTool->getSchemaFromMetadata($modelsMetadata);
+        $migrationData = [];
 
-        $schemaTool = new SchemaTool($entityManager);
+        foreach ($schema->getTables() as $table) {
+            $migrationItem = $this->generateTableMigration($table);
+            $tableName = $table->getName();
 
-        try {
-            $modelMetadata = $entityManager->getClassMetadata($modelName);
-        } catch (MappingException $e) {
-            echo "\tModel {$modelName} skipped\n";
-            return null;
+            if (null === $migrationItem) {
+                continue;
+            }
+
+            $migrationItem['modelName'] = $tableModelMap[$tableName];
+            $migrationData[$tableName] = $migrationItem;
         }
 
-        $schema = $schemaTool->getSchemaFromMetadata([$modelMetadata]);
-        $tableName = $modelMetadata->getTableName();
+        return $migrationData;
+    }
 
-        $inferredTable = $schema->getTable($tableName);
+    protected function generateTableMigration(Table $inferredTable): ?array
+    {
+        $tableName = $inferredTable->getName();
         $existingTable = $this->prepareExistingTable($tableName);
 
         if (null === $existingTable) {
@@ -82,25 +121,29 @@ class MigrationGenerator
             $up = $exporter->export();
             $down = TableExporter::exportAsset($inferredTable, TableExporter::MODE_DROP);
         } else {
-            $forward = $comparator->compareTables($existingTable, $inferredTable);
+            $forward = $this->comparator->compareTables($existingTable, $inferredTable);
 
             if ($forward->isEmpty()) {
                 return null;
             }
 
-            $backward = $comparator->compareTables($inferredTable, $existingTable);
+            $backward = $this->comparator->compareTables($inferredTable, $existingTable);
 
             $mode = ImplicitMigration::MODE_UPDATE;
             $up = TableDiffExporter::exportAsset($forward);
             $down = TableDiffExporter::exportAsset($backward);
         }
 
-
-        return $this->templateManager->process([
+        $contents = $this->templateManager->process([
             'tableName' => $tableName,
             'migrationMode' => $mode,
             'up' => $up,
             'down' => $down,
         ]);
+
+        return [
+            'mode' => $mode,
+            'contents' => $contents,
+        ];
     }
 }
