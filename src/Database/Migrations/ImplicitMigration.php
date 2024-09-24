@@ -2,114 +2,53 @@
 
 namespace Toramanlis\ImplicitMigrations\Database\Migrations;
 
-use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Schema\AbstractSchemaManager;
-use Doctrine\DBAL\Schema\Table;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Config;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 abstract class ImplicitMigration extends Migration
 {
+    protected const TABLE_NAME_OLD = '';
+    protected const TABLE_NAME_NEW = '';
+
+    protected const SOURCE = '';
+
+    protected const MODE = null;
+
     public const MODE_CREATE = 'create';
     public const MODE_UPDATE = 'update';
 
-    protected const TABLE_NAME = '';
+    abstract public function tableUp(Blueprint $table): void;
 
-    protected const DRIVER_MAP = [
-        'mysql' => 'pdo_mysql',
-        'sqlite' => 'pdo_sqlite',
-        'pgsql' => 'pdo_pgsql',
-        'sqlsrv' => 'pdo_sqlsrv',
-    ];
+    abstract public function tableDown(Blueprint $table): void;
 
-    protected static $mode = '';
-
-    protected Connection $connectionInterface;
-
-    protected AbstractSchemaManager $schemaManager;
-
-    protected AbstractPlatform $platform;
-
-    abstract public function tableUp(Table $table): void;
-
-    abstract public function tableDown(Table $table): void;
-
-    public function __construct()
+    public function getSource()
     {
-        $dbParams = static::getDbParams();
-
-        $this->connectionInterface = DriverManager::getConnection($dbParams);
-        $this->schemaManager = $this->connectionInterface->createSchemaManager();
-        $this->platform = $this->connectionInterface->getDatabasePlatform();
+        return static::SOURCE;
     }
 
-    public static function getDbParams()
+    public function getMode()
     {
-        $config = Config::get('database.connections.' . Config::get('database.default'));
-
-        return [
-            ...$config,
-            'driver'   => static::DRIVER_MAP[$config['driver']],
-            'user'     => $config['username'],
-            'password' => $config['password'],
-            'dbname'   => $config['database'],
-            'host'     => $config['host'],
-            'port'     => $config['port']
-        ];
+        return static::MODE;
     }
 
-    public function getTableName()
+    public function getTableNameNew()
     {
-        return static::TABLE_NAME;
+        return static::TABLE_NAME_NEW;
     }
 
-    /**
-     * @param array<string> $statements
-     * @return void
-     */
-    protected function executeStatements(array $statements)
+    public function up(): void
     {
-        foreach ($statements as $statement) {
-            $this->connectionInterface->executeStatement($statement);
-        }
+        $method = static::MODE === self::MODE_CREATE ? 'create' : 'table';
+        Schema::{$method}(static::TABLE_NAME_OLD, function (Blueprint $table) {
+            $this->tableUp($table);
+        });
     }
 
-    protected function applyDifference(Table $existingTable, Table $alteredTable)
+    public function down(): void
     {
-        $comparator = $this->schemaManager->createComparator();
-        $tableDiff = $comparator->compareTables($existingTable, $alteredTable);
-
-        $this->executeStatements($this->platform->getAlterTableSQL($tableDiff));
-    }
-
-    public function up()
-    {
-        if (static::MODE_CREATE === static::$mode) {
-            $createdTable = new Table(static::TABLE_NAME);
-            $this->tableUp($createdTable);
-            $this->executeStatements($this->platform->getCreateTableSQL($createdTable));
-        } else {
-            $existingTable = $this->schemaManager->introspectTable(static::TABLE_NAME);
-            $alteredTable = clone $existingTable;
-            $this->tableUp($alteredTable);
-
-            $this->applyDifference($existingTable, $alteredTable);
-        }
-    }
-
-    public function down()
-    {
-        $existingTable = $this->schemaManager->introspectTable(static::TABLE_NAME);
-        $revertedTable = clone $existingTable;
-
-        $this->tableDown($revertedTable);
-        $this->applyDifference($existingTable, $revertedTable);
-    }
-
-    protected function dropTable()
-    {
-        $this->connectionInterface->executeStatement($this->platform->getDropTableSQL(static::TABLE_NAME));
+        Schema::table(static::TABLE_NAME_NEW, function (Blueprint $table) {
+            $this->tableDown($table);
+        });
     }
 }
