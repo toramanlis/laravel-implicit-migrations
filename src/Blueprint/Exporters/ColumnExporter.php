@@ -10,6 +10,9 @@ class ColumnExporter extends Exporter
     /** @var array<string,mixed> */
     protected array $attributes;
 
+    /** @var array<string,mixed> */
+    protected array $collapsedAttributes;
+
     protected ?string $collapsedType = null;
 
     public const SUPPORTED_MODIFIERS = [
@@ -40,7 +43,8 @@ class ColumnExporter extends Exporter
     {
         $this->attributes = array_filter($this->definition->getAttributes());
         unset($this->attributes['type'], $this->attributes['name']);
-        $nonCollapsables = $this->runCollapsables();
+
+        $this->runCollapsables();
         $modifiers = $this->extractModifiers($this->attributes);
 
         if (
@@ -51,26 +55,16 @@ class ColumnExporter extends Exporter
         }
 
         if (empty($this->attributes)) {
-            $nonCollapsableModifiers = $this->extractModifiers($nonCollapsables);
+            $collapsedModifiers = $this->extractModifiers($this->collapsedAttributes);
 
-            if (null !== $this->collapsedType && empty($nonCollapsables)) {
+            if (null !== $this->collapsedType && empty($this->collapsedAttributes)) {
                 $type = $this->collapsedType;
-                $modifiers = $nonCollapsableModifiers;
+                $modifiers = $collapsedModifiers;
             } else {
                 $type = $this->definition->type;
             }
 
-            $parameters = [$this->definition->name];
-
-            if (
-                in_array($type, ['id', 'remember_token']) ||
-                (
-                    'softDeletes' === $type &&
-                    'deleted_at' === $this->definition->name
-                )
-            ) {
-                $parameters = [];
-            }
+            $parameters = in_array($type, ['id', 'remember_token', 'softDeletes']) ? [] : [$this->definition->name];
 
             return $this->exportMethodCall($type, $parameters, $modifiers);
         } else {
@@ -89,13 +83,11 @@ class ColumnExporter extends Exporter
 
     protected function runCollapsables()
     {
-        $attributes = $this->attributes;
+        $this->collapsedAttributes = $this->attributes;
 
-        $this->collapseUnsigned($attributes);
-        $this->collapseSoftDeletes($attributes);
-        $this->collapseRememberToken($attributes);
-
-        return $attributes;
+        $this->collapseUnsigned();
+        $this->collapseSoftDeletes();
+        $this->collapseRememberToken();
     }
 
     protected function collapseId()
@@ -109,7 +101,7 @@ class ColumnExporter extends Exporter
         }
     }
 
-    protected function collapseIncrements(&$attributes)
+    protected function collapseIncrements()
     {
         if (
             !in_array($this->collapsedType, [
@@ -123,7 +115,7 @@ class ColumnExporter extends Exporter
             return;
         }
 
-        if (true === ($attributes['autoIncrement'] ?? null)) {
+        if (true === ($this->collapsedAttributes['autoIncrement'] ?? null)) {
             $this->collapsedType = match ($this->collapsedType) {
                 'unsignedTinyInteger' => 'tinyIncrements',
                 'unsignedSmallInteger' => 'smallIncrements',
@@ -131,13 +123,13 @@ class ColumnExporter extends Exporter
                 'unsignedInteger' => 'increments',
                 'unsignedBigInteger' => 'bigIncrements',
             };
-            unset($attributes['autoIncrement']);
+            unset($this->collapsedAttributes['autoIncrement']);
         }
 
         $this->collapseId();
     }
 
-    protected function collapseUnsigned(&$attributes)
+    protected function collapseUnsigned()
     {
         if (
             !in_array($this->definition->type, [
@@ -151,7 +143,7 @@ class ColumnExporter extends Exporter
             return;
         }
 
-        if (true === ($attributes['unsigned'] ?? null)) {
+        if (true === ($this->collapsedAttributes['unsigned'] ?? null)) {
             $this->collapsedType = match ($this->definition->type) {
                 'tinyInteger' => 'unsignedTinyInteger',
                 'smallInteger' => 'unsignedSmallInteger',
@@ -159,13 +151,13 @@ class ColumnExporter extends Exporter
                 'integer' => 'unsignedInteger',
                 'bigInteger' => 'unsignedBigInteger',
             };
-            unset($attributes['unsigned']);
+            unset($this->collapsedAttributes['unsigned']);
         }
 
-        $this->collapseIncrements($attributes);
+        $this->collapseIncrements($this->collapsedAttributes);
     }
 
-    protected function collapseSoftDeletes(&$attributes)
+    protected function collapseSoftDeletes()
     {
         if (
             !in_array($this->definition->type, [
@@ -176,24 +168,24 @@ class ColumnExporter extends Exporter
             return;
         }
 
-        if (true === ($attributes['nullable'] ?? null) && 'deleted_at' === $this->definition->name) {
+        if (true === ($this->collapsedAttributes['nullable'] ?? null) && 'deleted_at' === $this->definition->name) {
             $this->collapsedType = match ($this->definition->type) {
                 'timestamp' => 'softDeletes',
                 'timestampTz' => 'softDeletesTz',
             };
-            unset($attributes['nullable']);
+            unset($this->collapsedAttributes['nullable']);
         }
     }
 
-    protected function collapseRememberToken(&$attributes)
+    protected function collapseRememberToken()
     {
         if ('string' !== $this->definition->type) {
             return;
         }
 
-        if (100 === ($attributes['length'] ?? null) && 'remember_token' === $this->definition->name) {
+        if (100 === ($this->collapsedAttributes['length'] ?? null) && 'remember_token' === $this->definition->name) {
             $this->collapsedType = 'rememberToken';
-            unset($attributes['length']);
+            unset($this->collapsedAttributes['length']);
         }
     }
 
