@@ -3,17 +3,52 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Fluent;
 use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionMethod;
+use ReflectionProperty;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\MigrationAttribute;
+use Toramanlis\ImplicitMigrations\Attributes\Off;
+use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
+use Toramanlis\ImplicitMigrations\Attributes\Relationship;
 use Toramanlis\ImplicitMigrations\Attributes\Table;
+use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
+use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
+use Toramanlis\ImplicitMigrations\Blueprint\Relationships\Relationship as RelationshipsRelationship;
+use Toramanlis\ImplicitMigrations\Blueprint\Relationships\Polymorphic;
+use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
+use Toramanlis\ImplicitMigrations\Generator\RelationshipResolver;
 
+/** @package Toramanlis\ImplicitMigrations\Blueprint */
 class Manager
 {
+    /** @var array<string,RelationshipsRelationship> */
+    protected array $relationshipMap = [];
+
+    public function __construct(
+        /** @var array<Blueprint> */
+        protected array $blueprints
+    ) {
+    }
+
+    /** @return array<Blueprint>  */
+    public function getBlueprints(): array
+    {
+        return $this->blueprints;
+    }
+
+    /** @return array<RelationshipsRelationship>  */
+    public function getRelationshipMap(): array
+    {
+        return $this->relationshipMap;
+    }
+
     protected static function getMigrationAttributes(string $modelName): array
     {
         $reflection = new ReflectionClass($modelName);
@@ -33,6 +68,17 @@ class Manager
         foreach ($reflection->getProperties() as $propertyReflection) {
             $attributeReflections = $propertyReflection
                 ->getAttributes(MigrationAttribute::class, ReflectionAttribute::IS_INSTANCEOF);
+
+            if (
+                0 === count($attributeReflections)
+                && !static::isPropertyOff($modelName, $propertyReflection->getName())
+            ) {
+                $attribute = new Column();
+                $attribute->inferFromReflectionProperty($propertyReflection);
+                $attribute->inferFromExistingData();
+                $attributes[] = $attribute;
+            }
+
             foreach ($attributeReflections as $attributeReflection) {
                 $attribute = $attributeReflection->newInstance();
                 $attribute->inferFromReflectionProperty($propertyReflection);
@@ -46,19 +92,17 @@ class Manager
     }
 
     /**
-     * @param array<ImplicitMigration> $existingMigrations
-     * @return array<string, Blueprint>
+     * @param array<ImplicitMigration> $migrations
+     * @return array<string,Blueprint>
      */
     public static function mergeMigrationsToBlueprints(array $migrations): array
     {
         $blueprints = [];
         foreach ($migrations as $migration) {
-            $source = $migration->getSource();
+            $blueprints[$migration->getSource()] = $blueprints[$migration->getSource()]
+                ?? new SimplifyingBlueprint($migration->getTableNameNew());
 
-            $blueprints[$source] = $blueprints[$source] ??
-                new Blueprint($migration->getTableNameNew());
-
-            $migration->tableUp($blueprints[$source]);
+            $migration->tableUp($blueprints[$migration->getSource()]);
         }
 
         return $blueprints;
@@ -66,9 +110,238 @@ class Manager
 
     /**
      * @param string $modelName
-     * @return array<Blueprint>
+     * @return array<RelationshipsRelationship>
      */
-    public static function generateBlueprints(string $modelName): array
+    public static function getRelationships(string $modelName): array
+    {
+        $modelReflection = new ReflectionClass($modelName);
+        $modelInstance = new $modelName();
+
+        $relationships = [];
+
+        foreach ($modelReflection->getMethods(ReflectionMethod::IS_PUBLIC) as $methodReflection) {
+            if (
+                $methodReflection->isAbstract()
+                || $methodReflection->isStatic()
+                || $methodReflection->getNumberOfRequiredParameters()
+            ) {
+                continue;
+            }
+
+            if (
+                !count($methodReflection->getAttributes(Relationship::class))
+                && (
+                    static::isMethodOff($modelName, $methodReflection->getShortName())
+                    || !$methodReflection->hasReturnType()
+                    || !is_a((string) $methodReflection->getReturnType(), Relation::class, true)
+                )
+            ) {
+                continue;
+            }
+
+            $methodName = $methodReflection->getShortName();
+            $methodRelationships = RelationshipResolver::resolve($modelInstance->$methodName());
+
+            foreach ($methodRelationships as $relationship) {
+                $relationship->setSource("{$modelName}::{$methodName}");
+            }
+
+            $relationships = array_merge($relationships, $methodRelationships);
+
+            if (
+                count($methodRelationships) !== 1
+                || !$methodRelationships[0] instanceof IndirectRelationship
+            ) {
+                continue;
+            }
+
+            $relationship = $methodRelationships[0];
+
+            /** @var IndirectRelationship $relationship */
+
+            $pivotColumnAttributes = [];
+
+            foreach ($methodReflection->getAttributes(PivotColumn::class) as $pivotColumnAttribute) {
+                $pivotColumnAttributes[] = $pivotColumnAttribute->newInstance();
+            }
+
+            $relationship->setPivotColumnAttributes($pivotColumnAttributes);
+        }
+
+        return $relationships;
+    }
+
+    protected function getBlueprintByTable(string $table): Blueprint
+    {
+        if (!isset($this->blueprints[$table])) {
+            $blueprint = new Blueprint($table);
+            $this->blueprints[$table] = $blueprint;
+        }
+
+        return $this->blueprints[$table];
+    }
+
+    protected static function ensureKeyColumn(Blueprint $blueprint, string $columnName, string $type = 'id')
+    {
+        foreach ($blueprint->getColumns() as $column) {
+            if ($column->name === $columnName) {
+                return;
+            }
+        }
+
+        $blueprint->$type($columnName);
+    }
+
+    protected function defineForeignKey(
+        string $relatedTable,
+        string $foreignKey,
+        string $parentTable,
+        string $localKey
+    ) {
+        $blueprint = $this->getBlueprintByTable($relatedTable);
+        $parentBlueprint = $this->getBlueprintByTable($parentTable);
+
+        static::ensureKeyColumn($parentBlueprint, $localKey);
+
+        $blueprint->foreign($foreignKey)
+        ->references($localKey)
+        ->on($parentTable);
+    }
+
+    protected function applyRelationshipToBlueprints(RelationshipsRelationship $relationship)
+    {
+        if ($relationship instanceof DirectRelationship) {
+            $blueprint = $this->getBlueprintByTable($relationship->getRelatedTable());
+            $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
+
+            static::ensureKeyColumn($blueprint, $relationship->getForeignKey(), 'unsignedBigInteger');
+
+            if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
+                /** @var Polymorphic $relationship */
+                $this->ensureKeyColumn($blueprint, $relationship->getTypeKey(), 'string');
+                return;
+            }
+
+            $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
+            $this->relationshipMap[$relationship->getParentTable()] = $relationship;
+
+            $this->defineForeignKey(
+                $relationship->getRelatedTable(),
+                $relationship->getForeignKey(),
+                $relationship->getParentTable(),
+                $relationship->getLocalKey()
+            );
+        } elseif ($relationship instanceof IndirectRelationship) {
+            $morphableBlueprint = $this
+                ->getBlueprintByTable($relationship->getRelatedTables()[0]);
+            $blueprint = $this
+                ->getBlueprintByTable($relationship->getRelatedTables()[1]);
+            $pivotBlueprint = $this
+                ->getBlueprintByTable($relationship->getPivotTable());
+
+            [
+                $morphableBlueprint->getTable() => $morphableSideForeignKey,
+                $blueprint->getTable() => $foreignKey
+            ] = $relationship->getForeignKeys();
+            [
+                $morphableBlueprint->getTable() => $morphableSideLocalKey,
+                $blueprint->getTable() => $localKey
+            ] = $relationship->getLocalKeys();
+
+            $this->relationshipMap[$blueprint->getTable()] = $relationship;
+            $this->relationshipMap[$pivotBlueprint->getTable()] = $relationship;
+
+            $this->ensureKeyColumn($pivotBlueprint, $foreignKey, 'unsignedBigInteger');
+            $this->ensureKeyColumn($pivotBlueprint, $morphableSideForeignKey, 'unsignedBigInteger');
+            $this->defineForeignKey(
+                $relationship->getPivotTable(),
+                $foreignKey,
+                $blueprint->getTable(),
+                $localKey
+            );
+
+            foreach ($relationship->pivotColumnAttributes as $attribute) {
+                foreach ($pivotBlueprint->getColumns() as $column) {
+                    if ($attribute->getName() === $column->name) {
+                        continue 2;
+                    }
+                }
+
+                $attribute->applyToBlueprint($pivotBlueprint);
+            }
+
+            if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
+                /** @var Polymorphic $relationship */
+                $this->ensureKeyColumn($pivotBlueprint, $relationship->getTypeKey(), 'string');
+                return;
+            }
+
+            $this->relationshipMap[$morphableBlueprint->getTable()] = $relationship;
+            $this->ensureKeyColumn($morphableBlueprint, $morphableSideLocalKey);
+
+            $this->defineForeignKey(
+                $relationship->getPivotTable(),
+                $morphableSideForeignKey,
+                $morphableBlueprint->getTable(),
+                $morphableSideLocalKey
+            );
+        }
+    }
+
+    public function applyRelationshipsToBlueprints(array $relationships)
+    {
+        foreach ($relationships as $relationship) {
+            $this->applyRelationshipToBlueprints($relationship);
+        }
+    }
+
+    protected static function isModelOff(string $modelName): bool
+    {
+        $modelReflection = new ReflectionClass($modelName);
+        $attributes = $modelReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
+
+        return !Config::get('database.auto_infer_migrations') || 0 !== count($attributes);
+    }
+
+    protected static function isPropertyOff($modelName, $propertyName): bool
+    {
+        if (static::isModelOff($modelName)) {
+            return true;
+        }
+
+        $modelReflection = new ReflectionClass($modelName);
+
+        if ($modelReflection->hasProperty($propertyName)) {
+            $propertyReflection = new ReflectionProperty($modelName, $propertyName);
+            $attributes = $propertyReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
+            $explicitlyOff = 0 !== count($attributes);
+        } else {
+            $explicitlyOff = false;
+        }
+
+        return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
+    }
+
+    protected static function isMethodOff($modelName, $methodName): bool
+    {
+        if (static::isModelOff($modelName)) {
+            return true;
+        }
+
+        $modelReflection = new ReflectionClass($modelName);
+
+        if ($modelReflection->hasMethod($methodName)) {
+            $methodReflection = new ReflectionMethod($modelName, $methodName);
+            $attributes = $methodReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
+            $explicitlyOff = 0 !== count($attributes);
+        } else {
+            $explicitlyOff = false;
+        }
+
+        return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
+    }
+
+    public static function generateBlueprint(string $modelName): ?Blueprint
     {
         $attributes = static::getMigrationAttributes($modelName);
 
@@ -79,11 +352,13 @@ class Manager
             }
         }
 
-        if (!isset($tableAttribute)) {
-            return [];
+        if (!isset($tableAttribute) && static::isModelOff($modelName)) {
+            return null;
         }
 
-        $table = new Blueprint($tableAttribute->name, null, $tableAttribute->prefix);
+        /** @var Model */
+        $instance = new $modelName();
+        $table = new Blueprint($tableAttribute->name ?? $instance->getTable(), null, $tableAttribute->prefix ?? '');
 
         foreach ($attributes as $attribute) {
             $attribute->applyToBlueprint($table);
@@ -93,7 +368,7 @@ class Manager
         static::inferTimestamps($modelName, $table);
         static::inferSoftDeletes($modelName, $table);
 
-        return [$modelName => $table];
+        return $table;
     }
 
     protected static function inferPrimaryKey(string $modelName, Blueprint $table)
@@ -106,6 +381,10 @@ class Manager
 
         /** @var Model */
         $instance = new $modelName();
+
+        if (static::isPropertyOff($modelName, $instance->getKeyName())) {
+            return;
+        }
 
         if ('int' === $instance->getKeyType()) {
             $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());

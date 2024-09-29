@@ -25,10 +25,10 @@ class TemplateManager
         $placeholder = "<<{$key}>>";
         $placeholderPosition = strpos($subject, $placeholder);
         $previousNewlinePosition = strrpos($subject, "\n", $placeholderPosition - strlen($subject));
-        $afterNewline = substr($subject, $previousNewlinePosition + 1);
+        $afterNewline = false === $previousNewlinePosition ? '' : substr($subject, $previousNewlinePosition + 1);
 
         preg_match('/^\s+/', $afterNewline, $matches);
-        $indentation = $matches[0];
+        $indentation = $matches[0] ?? '';
 
         $value = strtr($value, [
             "\t" => str_repeat(' ', static::TAB_SIZE),

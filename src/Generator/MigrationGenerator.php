@@ -35,25 +35,36 @@ class MigrationGenerator
     public function generate(array $modelNames): array
     {
         $migrationData = [];
-        $tableModelMap = [];
         $blueprints = [];
+        $relationships = [];
+        $sourceMap = [];
 
         foreach ($modelNames as $modelName) {
-            $modelBlueprints = Manager::generateBlueprints($modelName);
+            $modelRelationships = Manager::getRelationships($modelName);
 
-            foreach ($modelBlueprints as $source => $blueprint) {
-                if (null === $blueprint) {
-                    continue;
-                }
+            $relationships = array_merge($relationships, $modelRelationships);
 
-                $tableModelMap[$blueprint->getTable()] = $modelName;
-                $blueprints[$source] = $blueprint;
+            $blueprint = Manager::generateBlueprint($modelName);
+
+            if (null === $blueprint) {
+                continue;
             }
+
+            $blueprints[$blueprint->getTable()] = $blueprint;
+            $sourceMap[$blueprint->getTable()] = $modelName;
         }
 
-        foreach ($blueprints as $source => $blueprint) {
+        $blueprintManager = new Manager($blueprints);
+        $blueprintManager->applyRelationshipsToBlueprints($relationships);
+
+        foreach ($blueprintManager->getRelationshipMap() as $tableName => $relationship) {
+            $sourceMap[$tableName] = $sourceMap[$tableName] ?? $relationship->getSource();
+        }
+
+        foreach ($blueprintManager->getBlueprints() as $table => $blueprint) {
+            $source = $sourceMap[$table];
             if (!isset($this->existingBlueprints[$source])) {
-                $migrationData[$blueprint->getTable()] = $this->getMigrationItem($source, $blueprint);
+                $migrationData[$table] = $this->getMigrationItem($source, $blueprint);
                 continue;
             }
 
@@ -63,7 +74,7 @@ class MigrationGenerator
                 continue;
             }
 
-            $migrationData[$blueprint->getTable()] = $this->getMigrationItem(
+            $migrationData[$this->existingBlueprints[$source]->getTable()] = $this->getMigrationItem(
                 $source,
                 $diff,
                 ImplicitMigration::MODE_UPDATE
@@ -79,6 +90,7 @@ class MigrationGenerator
         string $mode = ImplicitMigration::MODE_CREATE
     ) {
         $modelName = explode('::', $source)[0];
+
         $exporter = match ($mode) {
             ImplicitMigration::MODE_CREATE => TableExporter::class,
             ImplicitMigration::MODE_UPDATE => TableDiffExporter::class,
@@ -88,14 +100,20 @@ class MigrationGenerator
             ? [$definition->getTable(), $definition->getTable()]
             : [$definition->from->getTable(), $definition->to->getTable()];
 
+        $tableNames = $tableNameOld === $tableNameNew
+            ? (new TemplateManager('unchanged-table-name.php.tpl'))->process(['tableName' => $tableNameOld])
+            : (new TemplateManager('different-table-names.php.tpl'))->process([
+                'tableNameOld' => $tableNameOld,
+                'tableNameNew' => $tableNameNew,
+            ]);
+
         return [
             'modelName' => $modelName,
             'mode' => $mode,
             'contents' => $this->templateManager->process([
-                'tableNameOld' => $tableNameOld,
-                'tableNameNew' => $tableNameNew,
-                'source' => $source,
+                'tableNames' => $tableNames,
                 'migrationMode' => $mode,
+                'source' => $source,
                 'up' => $exporter::exportDefinition($definition),
                 'down' => $exporter::exportDefinition($definition, TableExporter::MODE_DOWN),
             ]),

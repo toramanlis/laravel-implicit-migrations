@@ -58,7 +58,7 @@ class TableDiffExporter extends Exporter
 
         [$oldName, $newName] = $rename;
 
-        return $this->exportMethodCall('renameColumn', [$oldName, $newName]);
+        return $this->exportMethodCall('rename', [$oldName, $newName]);
     }
 
     /**

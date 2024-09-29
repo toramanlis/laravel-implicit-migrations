@@ -5,11 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 
 return new class extends ImplicitMigration
 {
-    protected const TABLE_NAME_OLD = '<<tableNameOld>>';
-    protected const TABLE_NAME_NEW = '<<tableNameNew>>';
+    <<tableNames>>
+
+    protected const MODE = '<<migrationMode>>';
 
     protected const SOURCE = '<<source>>';
-    protected const MODE = '<<migrationMode>>';
 
     public function tableUp(Blueprint $table): void
     {

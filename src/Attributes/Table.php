@@ -10,9 +10,11 @@ use ReflectionClass;
 #[Attribute(Attribute::TARGET_CLASS)]
 class Table extends MigrationAttribute
 {
+    public ?string $name = null;
+
+    public string $prefix = '';
+
     public function __construct(
-        public ?string $name = null,
-        public string $prefix = '',
         protected ?string $engine = null,
         protected ?string $charset = null,
         protected ?string $collation = null

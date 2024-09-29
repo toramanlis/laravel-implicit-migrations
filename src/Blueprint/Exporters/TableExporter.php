@@ -71,7 +71,6 @@ class TableExporter extends Exporter
                 continue;
             }
 
-            
             if ('id' === $exporter->getCollapsedType()) {
                 array_unshift($columnExports, [$columnExport]);
             } else {

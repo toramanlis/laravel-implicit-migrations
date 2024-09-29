@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Schema;
 
 abstract class ImplicitMigration extends Migration
 {
-    protected const TABLE_NAME_OLD = '';
-    protected const TABLE_NAME_NEW = '';
-
-    protected const SOURCE = '';
+    protected const TABLE_NAME = '';
+    protected const TABLE_NAME_OLD = null;
+    protected const TABLE_NAME_NEW = null;
 
     protected const MODE = null;
+
+    protected const SOURCE = '';
 
     public const MODE_CREATE = 'create';
     public const MODE_UPDATE = 'update';
@@ -22,19 +23,24 @@ abstract class ImplicitMigration extends Migration
 
     abstract public function tableDown(Blueprint $table): void;
 
-    public function getSource()
-    {
-        return static::SOURCE;
-    }
-
     public function getMode()
     {
         return static::MODE;
     }
 
+    public function getTableNameOld()
+    {
+        return static::TABLE_NAME_OLD ?? static::TABLE_NAME;
+    }
+
     public function getTableNameNew()
     {
-        return static::TABLE_NAME_NEW;
+        return static::TABLE_NAME_NEW ?? static::TABLE_NAME;
+    }
+
+    public function getSource()
+    {
+        return static::SOURCE;
     }
 
     public function up(): void

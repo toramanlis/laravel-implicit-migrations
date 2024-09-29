@@ -94,6 +94,7 @@ class ForeignKey extends MigrationAttribute
             ->on($this->getReferenceTableName())
             ->onUpdate($this->onUpdate)
             ->onDelete($this->onDelete);
+
         return $table;
     }
 }

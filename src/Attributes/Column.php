@@ -49,8 +49,9 @@ class Column extends MigrationAttribute
         'computed' => ['expression'],
     ];
 
+    protected ?string $name = null;
+
     public function __construct(
-        protected ?string $name = null,
         protected ?string $type = null,
         protected ?bool $nullable = null,
         protected $default = null,

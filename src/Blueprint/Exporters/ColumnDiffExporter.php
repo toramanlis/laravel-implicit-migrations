@@ -12,6 +12,7 @@ class ColumnDiffExporter extends ColumnExporter
 
     public static function renameColumn(string $from, string $to)
     {
-        return static::exportMethodCall('renameColumn', [$from, $to]);
+        $parameters = static::exportParameters([$from, $to]);
+        return "\$table->renameColumn({$parameters});";
     }
 }
