@@ -1,6 +1,7 @@
 /.vscode/
 /.devcontainer/
 /.phpunit.cache/
+/.coverage/
 /vendor/
 phpunit.xml.bak
 coverage.xml

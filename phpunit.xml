@@ -35,6 +35,7 @@
     <coverage pathCoverage="true" ignoreDeprecatedCodeUnits="true" disableCodeCoverageIgnore="true">
         <report>
             <clover outputFile="coverage.xml"/>
+            <html outputDirectory=".coverage"/>
         </report>
     </coverage>
 </phpunit>
