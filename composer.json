@@ -11,9 +11,15 @@
             "Toramanlis\\ImplicitMigrations\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Toramanlis\\Tests\\": "tests/",
+            "Toramanlis\\Tests\\Data\\": "tests/_data/"
+        }
+    },
     "authors": [
         {
-            "name": "Timucin",
+            "name": "Timucin Bahsi",
             "email": "timucinbahsi@gmail.com"
         }
     ],
@@ -24,5 +30,10 @@
             ]
         }
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "stable",
+    "require-dev": {
+        "orchestra/testbench": "^9.5",
+        "laravel/sail": "^1.41",
+        "squizlabs/php_codesniffer": "^3.11"
+    }
 }

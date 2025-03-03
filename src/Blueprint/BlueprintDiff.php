@@ -9,6 +9,7 @@ use Illuminate\Support\Fluent;
 class BlueprintDiff
 {
     /**
+     * @param Blueprint $to
      * @param array<string> $modifiedColumns
      * @param array<ColumnDefinition> $droppedColumns
      * @param array<string, string> $renamedColumns

@@ -1,2 +1,7 @@
 /.vscode/
+/.devcontainer/
+/.phpunit.cache/
 /vendor/
+phpunit.xml.bak
+coverage.xml
+composer.lock

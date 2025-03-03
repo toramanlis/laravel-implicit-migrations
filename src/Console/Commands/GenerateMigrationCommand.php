@@ -34,7 +34,7 @@ class GenerateMigrationCommand extends Command
     public function handle()
     {
         $migrator = resolve('migrator');
-        $this->migrationPaths = array_merge($migrator->paths(), [database_path(('migrations'))]);
+        $this->migrationPaths = array_merge($migrator->paths(), [database_path('migrations')]);
         $this->modelNames = $this->argument('models') ?:
             $this->getModelNames(Config::get('database.model_paths'));
 
@@ -66,7 +66,12 @@ class GenerateMigrationCommand extends Command
         $modelFiles = [];
 
         foreach ($modelPaths as $modelPath) {
-            foreach (new FilesystemIterator(base_path($modelPath), FilesystemIterator::SKIP_DOTS) as $modelFile) {
+            if (!$modelPath) {
+                continue;
+            }
+
+            $modelPath = $modelPath[0] === DIRECTORY_SEPARATOR ? $modelPath : base_path($modelPath);
+            foreach (new FilesystemIterator($modelPath, FilesystemIterator::SKIP_DOTS) as $modelFile) {
                 /** @var SplFileInfo $modelFile */
                 require_once($modelFile->getRealPath());
                 $modelFiles[] = $modelFile->getRealPath();
