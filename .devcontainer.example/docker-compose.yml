@@ -1,0 +1,17 @@
+services:
+    laravel.test:
+        build:
+            context: ../vendor/laravel/sail/runtimes/8.3
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP:-1000}'
+        image: sail-8.3/app
+        environment:
+            WWWUSER: '${WWWUSER:-1000}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: 'develop,debug,coverage'
+            XDEBUG_CONFIG: 'start_with_request=yes'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+            XDEBUG_TRIGGER: 1
+        volumes:
+            - '..:/var/www/html'
