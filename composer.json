@@ -3,7 +3,7 @@
     "description": "Adds a command to create migrations by Eloquent models",
     "type": "library",
     "require": {
-        "laravel/framework": "~11.20"
+        "laravel/framework": "~12"
     },
     "license": "MIT",
     "autoload": {
@@ -32,8 +32,8 @@
     },
     "minimum-stability": "stable",
     "require-dev": {
-        "orchestra/testbench": "^9.5",
-        "laravel/sail": "^1.41",
-        "squizlabs/php_codesniffer": "^3.11"
+        "orchestra/testbench": "*",
+        "laravel/sail": "*",
+        "squizlabs/php_codesniffer": "*"
     }
 }

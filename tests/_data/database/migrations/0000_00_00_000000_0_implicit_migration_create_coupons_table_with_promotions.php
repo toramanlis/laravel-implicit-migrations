@@ -14,8 +14,6 @@ return new class extends ImplicitMigration
     public function tableUp(Blueprint $table): void
     {
         $table->id();
-        $table->string('builder')->default('Illuminate\\Database\\Eloquent\\Builder');
-        $table->string('collection_class')->default('Illuminate\\Database\\Eloquent\\Collection');
         $table->unsignedBigInteger('promotion_id');
         $table->timestamps();
 

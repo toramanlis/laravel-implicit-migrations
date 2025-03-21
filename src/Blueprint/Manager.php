@@ -3,11 +3,14 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
 use Exception;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -15,13 +18,11 @@ use ReflectionMethod;
 use ReflectionProperty;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
-use Toramanlis\ImplicitMigrations\Attributes\ImpliesColumnExistence;
 use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Attributes\MigrationAttribute;
 use Toramanlis\ImplicitMigrations\Attributes\Off;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
 use Toramanlis\ImplicitMigrations\Attributes\Relationship;
-use Toramanlis\ImplicitMigrations\Attributes\Table;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\Relationship as RelationshipsRelationship;
@@ -39,6 +40,13 @@ class Manager
         /** @var array<Blueprint> */
         protected array $blueprints
     ) {
+    }
+
+    public static function makeBlueprint(string $tableName, $prefix = '')
+    {
+        /** @var Connection */
+        $connection = DB::connection();
+        return new Blueprint($connection, $prefix . $tableName);
     }
 
     /** @return array<Blueprint>  */
@@ -178,7 +186,7 @@ class Manager
     protected function getBlueprintByTable(string $table): Blueprint
     {
         if (!isset($this->blueprints[$table])) {
-            $blueprint = new Blueprint($table);
+            $blueprint = static::makeBlueprint($table);
             $this->blueprints[$table] = $blueprint;
         }
 
@@ -352,6 +360,10 @@ class Manager
             return true;
         }
 
+        if (property_exists(Model::class, $propertyName)) {
+            return true;
+        }
+
         $modelReflection = new ReflectionClass($modelName);
 
         if ($modelReflection->hasProperty($propertyName)) {
@@ -368,6 +380,10 @@ class Manager
     protected static function isMethodOff($modelName, $methodName): bool
     {
         if (static::isModelOff($modelName)) {
+            return true;
+        }
+
+        if (method_exists(Model::class, $methodName)) {
             return true;
         }
 
@@ -394,7 +410,7 @@ class Manager
 
         /** @var Model */
         $instance = new $modelName();
-        $table = new Blueprint($tableAttribute->name ?? $instance->getTable(), null, $tableAttribute->prefix ?? '');
+        $table = static::makeBlueprint($tableAttribute->name ?? $instance->getTable(), $tableAttribute->prefix ?? '');
 
         foreach ($attributes as $attribute) {
             /** @var AppliesToBlueprint $attribute */

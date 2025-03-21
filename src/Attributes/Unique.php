@@ -3,10 +3,6 @@
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
 use Attribute;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\IndexDefinition;
-use ReflectionProperty;
-use Illuminate\Support\Str;
 use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]

@@ -2,11 +2,20 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
 
 class SimplifyingBlueprint extends Blueprint
 {
+    public function __construct($tableName, $prefix = '')
+    {
+        /** @var Connection */
+        $connection = DB::connection();
+        parent::__construct($connection, $prefix . $tableName);
+    }
+
     public function addColumn($type, $name, array $parameters = [])
     {
         parent::addColumn($type, $name, $parameters);
