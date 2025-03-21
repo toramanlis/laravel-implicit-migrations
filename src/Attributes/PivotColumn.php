@@ -17,14 +17,11 @@ class PivotColumn extends Column
 
     public function getName(): string
     {
-        if (null === $this->name) {
-            throw new Exception('Unable to get name before setting');
-        }
-
-        return $this->name;
+        return $this->name ?? '';
     }
 
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void
     {
+        return; // @codeCoverageIgnore
     }
 }

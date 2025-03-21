@@ -23,17 +23,17 @@ abstract class ImplicitMigration extends Migration
 
     abstract public function tableDown(Blueprint $table): void;
 
-    public function getMode()
+    public static function getMode()
     {
         return static::MODE;
     }
 
-    public function getTableNameOld()
+    public static function getTableNameOld()
     {
         return static::TABLE_NAME_OLD ?? static::TABLE_NAME;
     }
 
-    public function getTableNameNew()
+    public static function getTableNameNew()
     {
         return static::TABLE_NAME_NEW ?? static::TABLE_NAME;
     }
@@ -45,15 +45,15 @@ abstract class ImplicitMigration extends Migration
 
     public function up(): void
     {
-        $method = static::MODE === self::MODE_CREATE ? 'create' : 'table';
-        Schema::{$method}(static::TABLE_NAME_OLD, function (Blueprint $table) {
+        $method = static::getMode() === self::MODE_CREATE ? 'create' : 'table';
+        Schema::{$method}(static::getTableNameOld(), function (Blueprint $table) {
             $this->tableUp($table);
         });
     }
 
     public function down(): void
     {
-        Schema::table(static::TABLE_NAME_NEW, function (Blueprint $table) {
+        Schema::table(static::getTableNameNew(), function (Blueprint $table) {
             $this->tableDown($table);
         });
     }

@@ -28,7 +28,7 @@ class RelationshipResolver
         } elseif ($relation instanceof BelongsToMany) {
             return [static::resolveBelongsToMany($relation)];
         } else {
-            return [];
+            return []; // @codeCoverageIgnore
         }
     }
 

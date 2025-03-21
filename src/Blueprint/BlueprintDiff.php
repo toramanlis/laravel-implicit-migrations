@@ -42,7 +42,8 @@ class BlueprintDiff
             empty($this->addedIndexes) &&
             null === $this->getEngineChange() &&
             null === $this->getCharsetChange() &&
-            null === $this->getCollationChange();
+            null === $this->getCollationChange() &&
+            null === $this->getRename();
     }
 
     public function getAddedColumns(bool $reverse = false)

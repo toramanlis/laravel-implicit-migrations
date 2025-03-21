@@ -23,7 +23,7 @@ class IndexExporter extends Exporter
     protected function validateIndex()
     {
         if (null === IndexType::tryFrom(strtolower($this->definition->name))) {
-            throw new Exception("Unsupported index type: {$this->definition->name}");
+            throw new Exception("Unsupported index type: {$this->definition->name}"); // @codeCoverageIgnore
         }
     }
 

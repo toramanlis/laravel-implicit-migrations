@@ -16,6 +16,23 @@ abstract class BaseTestCase extends TestCase
 
     protected array $itemsCarried = [];
 
+    protected function generate(): void
+    {
+        $this->artisan('implicit-migrations:generate');
+    }
+
+    protected function migrate(): void
+    {
+        $this->artisan('migrate');
+    }
+
+    protected function rollback(?int $steps = null): void
+    {
+        $this->artisan('migrate:rollback', $steps ? [
+            '--step' => $steps,
+        ] : []);
+    }
+
     protected function getApp(): Application
     {
         if (!$this->app) {
@@ -23,6 +40,26 @@ abstract class BaseTestCase extends TestCase
         }
 
         return $this->app;
+    }
+
+    protected static function path(array $parts): string
+    {
+        return implode(DIRECTORY_SEPARATOR, $parts);
+    }
+
+    protected static function testPath(array $parts): string
+    {
+        return static::path(['tests', ...$parts]);
+    }
+
+    protected static function dataPath($parts): string
+    {
+        return static::testPath(['_data', ...$parts]);
+    }
+
+    protected static function tmpPath($parts): string
+    {
+        return static::testPath(['_tmp', ...$parts]);
     }
 
     protected function carryData(string|array $files, string $directory = ''): void
@@ -48,8 +85,8 @@ abstract class BaseTestCase extends TestCase
             $relativeTarget = trim($value, DIRECTORY_SEPARATOR);
             $relativeSource = is_string($key) ? trim($key, DIRECTORY_SEPARATOR) : $relativeTarget;
 
-            $source = package_path(implode(DIRECTORY_SEPARATOR, ['tests', '_data', $directory, $relativeSource]));
-            $target = package_path(implode(DIRECTORY_SEPARATOR, ['tests', '_tmp', $directory, $relativeTarget]));
+            $source = package_path(static::dataPath([$directory, $relativeSource]));
+            $target = package_path(static::tmpPath([$directory, $relativeTarget]));
 
             if (is_dir($source)) {
                 $entries = [];
@@ -82,6 +119,16 @@ abstract class BaseTestCase extends TestCase
             file_put_contents($target, file_get_contents($source));
             $this->itemsCarried[] = $target;
         }
+    }
+
+    protected function carryModels(array $models)
+    {
+        $this->carryData([static::path(['app', 'Models']) => $models]);
+    }
+
+    protected function carryMigrations(array $migrations)
+    {
+        $this->carryData([static::path(['database', 'migrations']) => $migrations]);
     }
 
     protected function cleanTmp()
@@ -120,19 +167,30 @@ abstract class BaseTestCase extends TestCase
         return $migrations;
     }
 
-    protected function expectMigration($nameMatcher = '.*?', $reference = null): void
+    protected function expectMigrationCreation(bool $takesPlace, $nameMatcher = '.*?', $reference = null): void
     {
         $matchingMigrations = $this->getCreatedMigrations($nameMatcher);
         $migrationFileCreated = count($matchingMigrations) > 0;
-        $this->assertTrue($migrationFileCreated, 'No migration created matching the pattern: ' . $nameMatcher);
 
-        if (!$migrationFileCreated || !$reference) {
+        if ($takesPlace) {
+            $this->assertTrue($migrationFileCreated, 'No migration created matching the pattern: ' . $nameMatcher);
+        } else {
+            $this->assertFalse($migrationFileCreated, 'A migration created matching the pattern: ' . $nameMatcher);
             return;
         }
 
+        if (!$migrationFileCreated) {
+            return;
+        }
+
+        $reference = $reference ?? "0000_00_00_000000_0_implicit_migration_{$nameMatcher}.php";
+
         $contentsMatch = false;
 
-        $referenceFile = package_path(implode(DIRECTORY_SEPARATOR, ['tests', '_data', $reference]));
+        $referenceFile = package_path(static::dataPath([
+            'database', 'migrations', $reference
+        ]));
+
         if (file_exists($referenceFile)) {
             foreach ($matchingMigrations as $migration) {
                 $contentsMatch = file_get_contents($referenceFile) === file_get_contents($migration);
@@ -145,8 +203,19 @@ abstract class BaseTestCase extends TestCase
             }
         }
 
-        $this->assertTrue($contentsMatch, 'Migration contents do not match the reference');
+        $this->assertTrue($contentsMatch, 'Migration contents do not match the reference: ' . $reference);
     }
+
+    public function expectMigration($nameMatcher = '.*?', $reference = null): void
+    {
+        $this->expectMigrationCreation(true, $nameMatcher, $reference);
+    }
+
+    public function expectNoMigration($nameMatcher = '.*?'): void
+    {
+        $this->expectMigrationCreation(false, $nameMatcher);
+    }
+
 
     protected function getPackageProviders($app)
     {
@@ -157,7 +226,7 @@ abstract class BaseTestCase extends TestCase
 
     protected function defineDatabaseMigrations()
     {
-        $migrationsPath = package_path(implode(DIRECTORY_SEPARATOR, ['tests', '_tmp', 'database', 'migrations']));
+        $migrationsPath = package_path(static::tmpPath(['database', 'migrations']));
 
         if (!is_dir($migrationsPath)) {
             mkdir($migrationsPath, 0755, true);
@@ -168,7 +237,7 @@ abstract class BaseTestCase extends TestCase
 
     protected function defineEnvironment($app)
     {
-        $modelsPath = package_path(implode(DIRECTORY_SEPARATOR, ['tests', '_tmp', 'app', 'Models']));
+        $modelsPath = package_path(static::tmpPath(['app', 'Models']));
 
         if (!is_dir($modelsPath)) {
             mkdir($modelsPath, 0755, true);
@@ -177,6 +246,7 @@ abstract class BaseTestCase extends TestCase
         $app['config']->set('database.model_paths', [
             $modelsPath,
         ]);
+        $app['config']->set('database.auto_infer_migrations', false);
     }
 
     public function tearDown(): void

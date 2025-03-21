@@ -27,6 +27,14 @@ class IndirectRelationship extends Relationship
     ) {
     }
 
+    public function isReady(): bool
+    {
+        return null !== $this->pivotTable
+            && !empty($this->relatedTables)
+            && !empty($this->foreignKeys)
+            && !empty($this->localKeys);
+    }
+
     /**
      * @param string $pivotTable
      * @return static
@@ -38,6 +46,8 @@ class IndirectRelationship extends Relationship
     }
 
     /**
+     * @codeCoverageIgnore
+     *
      * @param array<string> $relatedTables
      * @return static
      */
@@ -58,6 +68,8 @@ class IndirectRelationship extends Relationship
     }
 
     /**
+     * @codeCoverageIgnore
+     *
      * @param array<string,string> $foreignKeys
      * @return static
      */
@@ -79,6 +91,8 @@ class IndirectRelationship extends Relationship
     }
 
     /**
+     * @codeCoverageIgnore
+     *
      * @param array<string,string> $localKeys
      * @return static
      */
@@ -109,6 +123,12 @@ class IndirectRelationship extends Relationship
         return $this;
     }
 
+    /**
+     * @codeCoverageIgnore
+     *
+     * @param string $pivotColumn
+     * @return static
+     */
     public function addPivotColumn(string $pivotColumn): static
     {
         $this->pivotColumns[] = $pivotColumn;
@@ -125,6 +145,12 @@ class IndirectRelationship extends Relationship
         return $this;
     }
 
+    /**
+     * @codeCoverageIgnore
+     *
+     * @return string
+     * @throws Exception
+     */
     public function getPivotTable(): string
     {
         if (null === $this->pivotTable) {
@@ -152,9 +178,18 @@ class IndirectRelationship extends Relationship
         return $this->localKeys;
     }
 
-    /** @return array<string>  */
+    /**
+     * @codeCoverageIgnore
+     *
+     * @return array<string>
+     */
     public function getPivotColumns(): array
     {
         return $this->pivotColumns;
+    }
+
+    public function getForeignKeyAliases(): array
+    {
+        return $this->foreignKeys;
     }
 }

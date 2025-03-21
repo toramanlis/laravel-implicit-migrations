@@ -46,6 +46,7 @@ class ColumnExporter extends Exporter
 
         $this->runCollapsables();
         $modifiers = $this->extractModifiers($this->attributes);
+        $collapsedModifiers = $this->extractModifiers($this->collapsedAttributes);
 
         if (
             in_array($this->definition->type, ['char', 'string']) &&
@@ -54,17 +55,20 @@ class ColumnExporter extends Exporter
             unset($this->attributes['length']);
         }
 
-        if (empty($this->attributes)) {
-            $collapsedModifiers = $this->extractModifiers($this->collapsedAttributes);
+        $isCollapsable = null !== $this->collapsedType && empty($this->collapsedAttributes);
 
-            if (null !== $this->collapsedType && empty($this->collapsedAttributes)) {
+        if (empty($this->attributes) || $isCollapsable) {
+            if ($isCollapsable) {
                 $type = $this->collapsedType;
                 $modifiers = $collapsedModifiers;
             } else {
                 $type = $this->definition->type;
             }
 
-            $parameters = in_array($type, ['id', 'remember_token', 'softDeletes']) ? [] : [$this->definition->name];
+            $parameters = in_array($type, ['id', 'rememberToken', 'softDeletes']) ? [] : [$this->definition->name];
+            if ('id' === $type && 'id' !== $this->definition->name) {
+                $parameters[] = $this->definition->name;
+            }
 
             return $this->exportMethodCall($type, $parameters, $modifiers);
         } else {
@@ -96,9 +100,7 @@ class ColumnExporter extends Exporter
             return;
         }
 
-        if ('id' === $this->definition->name) {
-            $this->collapsedType = 'id';
-        }
+        $this->collapsedType = 'id';
     }
 
     protected function collapseIncrements()

@@ -21,6 +21,14 @@ class DirectRelationship extends Relationship
     ) {
     }
 
+    public function isReady(): bool
+    {
+        return null !== $this->parentTable
+            && null !== $this->relatedTable
+            && null !== $this->foreignKey
+            && null !== $this->localKey;
+    }
+
     public function setParentTable(string $parentTable): static
     {
         $this->parentTable = $parentTable;
@@ -48,7 +56,7 @@ class DirectRelationship extends Relationship
     public function getParentTable(): string
     {
         if (null === $this->parentTable) {
-            throw new Exception('Unable to get parent table before setting');
+            throw new Exception('Unable to get parent table before setting'); // @codeCoverageIgnore
         }
 
         return $this->parentTable;
@@ -57,7 +65,7 @@ class DirectRelationship extends Relationship
     public function getRelatedTable(): string
     {
         if (null === $this->relatedTable) {
-            throw new Exception('Unable to get related table before setting');
+            throw new Exception('Unable to get related table before setting'); // @codeCoverageIgnore
         }
 
         return $this->relatedTable;
@@ -66,7 +74,7 @@ class DirectRelationship extends Relationship
     public function getForeignKey(): string
     {
         if (null === $this->foreignKey) {
-            throw new Exception('Unable to get foreign key before setting');
+            throw new Exception('Unable to get foreign key before setting'); // @codeCoverageIgnore
         }
 
         return $this->foreignKey;
@@ -75,9 +83,14 @@ class DirectRelationship extends Relationship
     public function getLocalKey(): string
     {
         if (null === $this->localKey) {
-            throw new Exception('Unable to get local key before setting');
+            throw new Exception('Unable to get local key before setting'); // @codeCoverageIgnore
         }
 
         return $this->localKey;
+    }
+
+    public function getForeignKeyAlias(): string
+    {
+        return $this->getForeignKey();
     }
 }

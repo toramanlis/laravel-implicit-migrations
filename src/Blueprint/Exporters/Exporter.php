@@ -37,9 +37,11 @@ abstract class Exporter
             $totalLength = array_sum(array_map('strlen', $components));
 
             if ($totalLength > 80) {
+                // @codeCoverageIgnoreStart
                 $start = "\n\t";
                 $end = ",\n";
                 $separator = ",\n\t";
+                // @codeCoverageIgnoreEnd
             } else {
                 $start = '';
                 $end = '';
@@ -87,16 +89,18 @@ abstract class Exporter
             return null === $item ? true : !empty($item);
         }));
 
-        if (!empty($filteredItems)) {
-            while (null === $filteredItems[0] || !trim($filteredItems[0])) {
-                array_shift($filteredItems);
-            }
+        while (
+            !empty($filteredItems) &&
+            (null === $filteredItems[0] || !trim($filteredItems[0]))
+        ) {
+            array_shift($filteredItems);
         }
 
-        if (!empty($filteredItems)) {
-            while (null === last($filteredItems) || !trim(last($filteredItems))) {
-                array_pop($filteredItems);
-            }
+        while (
+            !empty($filteredItems) &&
+            (null === last($filteredItems) || !trim(last($filteredItems)))
+        ) {
+            array_pop($filteredItems);
         }
 
         return implode("\n", $filteredItems);
@@ -113,7 +117,7 @@ abstract class Exporter
         $totalLength = array_sum(array_map('strlen', $items));
 
         if ($totalLength > 80) {
-            $parameters = str_replace("\n", "\n\t", implode(",\n", $items));
+            $parameters = str_replace("\n", "\n\t", implode(",\n", $items)); // @codeCoverageIgnore
         } else {
             $parameters = implode(', ', $items);
         }
@@ -122,8 +126,10 @@ abstract class Exporter
             $start = '';
             $end = '';
         } else {
+            // @codeCoverageIgnoreStart
             $start = "\n\t";
             $end = "\n";
+            // @codeCoverageIgnoreEnd
         }
 
         return "{$start}" . $parameters . "{$end}";

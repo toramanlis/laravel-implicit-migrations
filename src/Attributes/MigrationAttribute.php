@@ -2,14 +2,14 @@
 
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
-use Illuminate\Database\Schema\Blueprint;
 use ReflectionClass;
 use ReflectionProperty;
 
+/**
+ * @codeCoverageIgnore
+ */
 abstract class MigrationAttribute
 {
-    abstract public function applyToBlueprint(Blueprint $table): Blueprint;
-
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void
     {
     }

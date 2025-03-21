@@ -5,6 +5,7 @@ namespace Toramanlis\ImplicitMigrations\Console\Commands;
 use FilesystemIterator;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use ReflectionClass;
 use SplFileInfo;
@@ -39,7 +40,9 @@ class GenerateMigrationCommand extends Command
             $this->getModelNames(Config::get('database.model_paths'));
 
         $migrations = $this->getImplicitMigrations();
-        $generator = new MigrationGenerator(static::TEMPLATE_NAME, $migrations);
+        $generator = App::make(MigrationGenerator::class, [
+            'templateName' => static::TEMPLATE_NAME,
+            'existingMigrations' => $migrations]);
 
         $migrationData = $generator->generate($this->modelNames);
 
@@ -67,7 +70,7 @@ class GenerateMigrationCommand extends Command
 
         foreach ($modelPaths as $modelPath) {
             if (!$modelPath) {
-                continue;
+                continue; // @codeCoverageIgnore
             }
 
             $modelPath = $modelPath[0] === DIRECTORY_SEPARATOR ? $modelPath : base_path($modelPath);
@@ -85,7 +88,7 @@ class GenerateMigrationCommand extends Command
 
             $modelFile = (new ReflectionClass($className))->getFileName();
             if (!in_array($modelFile, $modelFiles)) {
-                continue;
+                continue; // @codeCoverageIgnore
             }
 
             $modelNames[$modelFile] = $className;
@@ -134,14 +137,15 @@ class GenerateMigrationCommand extends Command
             $targetDepth = 0;
 
             foreach ($this->migrationPaths as $migrationPath) {
-                if (0 !== strpos($migrationPath, $modelPath)) {
+                if (
+                    0 !== strpos($migrationPath, $modelPath) ||
+                    !(null === $targetPath || count(explode(DIRECTORY_SEPARATOR, $migrationPath)) < $targetDepth)
+                ) {
                     continue;
                 }
 
-                if (null === $targetPath || count(explode(DIRECTORY_SEPARATOR, $migrationPath)) < $targetDepth) {
-                    $targetPath = $migrationPath;
-                    $targetDepth = count(explode(DIRECTORY_SEPARATOR, $targetPath));
-                }
+                $targetPath = $migrationPath;
+                $targetDepth = count(explode(DIRECTORY_SEPARATOR, $targetPath));
             }
         }
 

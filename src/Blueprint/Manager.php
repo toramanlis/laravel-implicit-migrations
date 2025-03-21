@@ -2,6 +2,7 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
+use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,6 +14,9 @@ use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
+use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
+use Toramanlis\ImplicitMigrations\Attributes\ImpliesColumnExistence;
+use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Attributes\MigrationAttribute;
 use Toramanlis\ImplicitMigrations\Attributes\Off;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
@@ -196,95 +200,134 @@ class Manager
         string $relatedTable,
         string $foreignKey,
         string $parentTable,
-        string $localKey
+        string $localKey,
+        string $foreignKeyAlias
     ) {
         $blueprint = $this->getBlueprintByTable($relatedTable);
+
+        foreach ($blueprint->getCommands() as $command) {
+            if ('foreign' !== $command->name) {
+                continue;
+            }
+
+            if (
+                $command->columns[0] === $foreignKey &&
+                $command->references === $localKey &&
+                $command->on === $parentTable
+            ) {
+                return;
+            }
+        }
+
         $parentBlueprint = $this->getBlueprintByTable($parentTable);
 
         static::ensureKeyColumn($parentBlueprint, $localKey);
 
-        $blueprint->foreign($foreignKey)
-        ->references($localKey)
-        ->on($parentTable);
+        $index = $blueprint->foreign($foreignKey)
+            ->references($localKey)
+            ->on($parentTable);
+
+        $index->index = str_replace($foreignKey, $foreignKeyAlias, $index->index);
+
+        return $index;
+    }
+
+    protected function applyDirectRelationshipToBlueprints(DirectRelationship $relationship)
+    {
+        $blueprint = $this->getBlueprintByTable($relationship->getRelatedTable());
+        $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
+
+        static::ensureKeyColumn($blueprint, $relationship->getForeignKey(), 'unsignedBigInteger');
+
+        if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
+            /** @var Polymorphic $relationship */
+            $this->ensureKeyColumn($blueprint, $relationship->getTypeKey(), 'string');
+        }
+
+        $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
+        $this->relationshipMap[$relationship->getParentTable()] = $relationship;
+
+        $this->defineForeignKey(
+            $relationship->getRelatedTable(),
+            $relationship->getForeignKey(),
+            $relationship->getParentTable(),
+            $relationship->getLocalKey(),
+            $relationship->getForeignKeyAlias()
+        );
+    }
+
+    protected function applyIndirectRelationshipToBlueprints(IndirectRelationship $relationship)
+    {
+        $targetBlueprint = $this
+                ->getBlueprintByTable($relationship->getRelatedTables()[0]);
+        $blueprint = $this
+            ->getBlueprintByTable($relationship->getRelatedTables()[1]);
+        $pivotBlueprint = $this
+            ->getBlueprintByTable($relationship->getPivotTable());
+
+        [
+            $targetBlueprint->getTable() => $targetForeignKey,
+            $blueprint->getTable() => $foreignKey
+        ] = $relationship->getForeignKeys();
+        [
+            $targetBlueprint->getTable() => $targetForeignKeyAlias,
+            $blueprint->getTable() => $foreignKeyAlias
+        ] = $relationship->getForeignKeyAliases();
+        [
+            $targetBlueprint->getTable() => $targetLocalKey,
+            $blueprint->getTable() => $localKey
+        ] = $relationship->getLocalKeys();
+
+        $this->relationshipMap[$blueprint->getTable()] = $relationship;
+        $this->relationshipMap[$pivotBlueprint->getTable()] = $relationship;
+
+        $this->ensureKeyColumn($pivotBlueprint, $foreignKey, 'unsignedBigInteger');
+        $this->ensureKeyColumn($pivotBlueprint, $targetForeignKey, 'unsignedBigInteger');
+        $this->defineForeignKey(
+            $relationship->getPivotTable(),
+            $foreignKey,
+            $blueprint->getTable(),
+            $localKey,
+            $foreignKeyAlias
+        );
+
+        foreach ($relationship->pivotColumnAttributes as $attribute) {
+            foreach ($pivotBlueprint->getColumns() as $column) {
+                if ($attribute->getName() === $column->name) {
+                    continue 2;
+                }
+            }
+
+            $attribute->applyToBlueprint($pivotBlueprint);
+        }
+
+        if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
+            /** @var Polymorphic $relationship */
+            $this->ensureKeyColumn($pivotBlueprint, $relationship->getTypeKey(), 'string');
+        }
+
+        $this->relationshipMap[$targetBlueprint->getTable()] = $relationship;
+        $this->ensureKeyColumn($targetBlueprint, $targetLocalKey);
+
+        $this->defineForeignKey(
+            $relationship->getPivotTable(),
+            $targetForeignKey,
+            $targetBlueprint->getTable(),
+            $targetLocalKey,
+            $targetForeignKeyAlias
+        );
     }
 
     protected function applyRelationshipToBlueprints(RelationshipsRelationship $relationship)
     {
+        if (!$relationship->isReady()) {
+            return;
+        }
+
         if ($relationship instanceof DirectRelationship) {
-            $blueprint = $this->getBlueprintByTable($relationship->getRelatedTable());
-            $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
-
-            static::ensureKeyColumn($blueprint, $relationship->getForeignKey(), 'unsignedBigInteger');
-
-            if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
-                /** @var Polymorphic $relationship */
-                $this->ensureKeyColumn($blueprint, $relationship->getTypeKey(), 'string');
-                return;
-            }
-
-            $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
-            $this->relationshipMap[$relationship->getParentTable()] = $relationship;
-
-            $this->defineForeignKey(
-                $relationship->getRelatedTable(),
-                $relationship->getForeignKey(),
-                $relationship->getParentTable(),
-                $relationship->getLocalKey()
-            );
+            $this->applyDirectRelationshipToBlueprints($relationship);
         } elseif ($relationship instanceof IndirectRelationship) {
-            $morphableBlueprint = $this
-                ->getBlueprintByTable($relationship->getRelatedTables()[0]);
-            $blueprint = $this
-                ->getBlueprintByTable($relationship->getRelatedTables()[1]);
-            $pivotBlueprint = $this
-                ->getBlueprintByTable($relationship->getPivotTable());
-
-            [
-                $morphableBlueprint->getTable() => $morphableSideForeignKey,
-                $blueprint->getTable() => $foreignKey
-            ] = $relationship->getForeignKeys();
-            [
-                $morphableBlueprint->getTable() => $morphableSideLocalKey,
-                $blueprint->getTable() => $localKey
-            ] = $relationship->getLocalKeys();
-
-            $this->relationshipMap[$blueprint->getTable()] = $relationship;
-            $this->relationshipMap[$pivotBlueprint->getTable()] = $relationship;
-
-            $this->ensureKeyColumn($pivotBlueprint, $foreignKey, 'unsignedBigInteger');
-            $this->ensureKeyColumn($pivotBlueprint, $morphableSideForeignKey, 'unsignedBigInteger');
-            $this->defineForeignKey(
-                $relationship->getPivotTable(),
-                $foreignKey,
-                $blueprint->getTable(),
-                $localKey
-            );
-
-            foreach ($relationship->pivotColumnAttributes as $attribute) {
-                foreach ($pivotBlueprint->getColumns() as $column) {
-                    if ($attribute->getName() === $column->name) {
-                        continue 2;
-                    }
-                }
-
-                $attribute->applyToBlueprint($pivotBlueprint);
-            }
-
-            if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
-                /** @var Polymorphic $relationship */
-                $this->ensureKeyColumn($pivotBlueprint, $relationship->getTypeKey(), 'string');
-                return;
-            }
-
-            $this->relationshipMap[$morphableBlueprint->getTable()] = $relationship;
-            $this->ensureKeyColumn($morphableBlueprint, $morphableSideLocalKey);
-
-            $this->defineForeignKey(
-                $relationship->getPivotTable(),
-                $morphableSideForeignKey,
-                $morphableBlueprint->getTable(),
-                $morphableSideLocalKey
-            );
+            $this->applyIndirectRelationshipToBlueprints($relationship);
         }
     }
 
@@ -316,7 +359,7 @@ class Manager
             $attributes = $propertyReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
             $explicitlyOff = 0 !== count($attributes);
         } else {
-            $explicitlyOff = false;
+            $explicitlyOff = false; // @codeCoverageIgnore
         }
 
         return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
@@ -335,7 +378,7 @@ class Manager
             $attributes = $methodReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
             $explicitlyOff = 0 !== count($attributes);
         } else {
-            $explicitlyOff = false;
+            $explicitlyOff = false; // @codeCoverageIgnore
         }
 
         return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
@@ -345,15 +388,8 @@ class Manager
     {
         $attributes = static::getMigrationAttributes($modelName);
 
-        foreach ($attributes as $attribute) {
-            if ($attribute instanceof Table) {
-                $tableAttribute = $attribute;
-                break;
-            }
-        }
-
-        if (!isset($tableAttribute) && static::isModelOff($modelName)) {
-            return null;
+        if (empty($attributes) && static::isModelOff($modelName)) {
+            return null; // @codeCoverageIgnore
         }
 
         /** @var Model */
@@ -361,6 +397,7 @@ class Manager
         $table = new Blueprint($tableAttribute->name ?? $instance->getTable(), null, $tableAttribute->prefix ?? '');
 
         foreach ($attributes as $attribute) {
+            /** @var AppliesToBlueprint $attribute */
             $attribute->applyToBlueprint($table);
         }
 
@@ -371,33 +408,74 @@ class Manager
         return $table;
     }
 
-    protected static function inferPrimaryKey(string $modelName, Blueprint $table)
+    public function ensureIndexColumns(array $modelNames): void
     {
-        foreach ($table->getCommands() as $command) {
-            if ('primary' === $command->name) {
-                return;
+        foreach ($modelNames as $modelName) {
+            $table = $this->blueprints[(new $modelName())->getTable()] ?? null;
+
+            if (!$table) {
+                continue; // @codeCoverageIgnore
+            }
+
+            $attributes = static::getMigrationAttributes($modelName);
+            foreach ($attributes as $attribute) {
+                if ($attribute instanceof ForeignKey) {
+                    $attribute->ensureColumns($table, $this->blueprints, $modelNames);
+                } elseif ($attribute instanceof Index) {
+                    $attribute->ensureColumns($table);
+                }
             }
         }
+    }
 
+    protected static function inferPrimaryKey(string $modelName, Blueprint $table)
+    {
         /** @var Model */
         $instance = new $modelName();
 
-        if (static::isPropertyOff($modelName, $instance->getKeyName())) {
-            return;
-        }
+        $columnExists = array_reduce(
+            $table->getColumns(),
+            fn ($carry, $column) => $carry || $column->name === $instance->getKeyName(),
+            false
+        );
 
-        if ('int' === $instance->getKeyType()) {
-            $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());
-        } else {
-            $method = Column::TYPE_MAP[$instance->getKeyType()] ?? null;
-            if (null === $method) {
-                return;
+        foreach ($table->getCommands() as $command) {
+            if ('primary' !== $command->name) {
+                continue;
             }
 
-            $table->$method($instance->getKeyName());
+            if (
+                count($command->columns) === 1 &&
+                $instance->getKeyName() === $command->columns[0] &&
+                $columnExists
+            ) {
+                return; // @codeCoverageIgnore
+            }
+
+            break;
         }
 
-        $table->primary($instance->getKeyName());
+        if (!$columnExists) {
+            if ('int' === $instance->getKeyType()) {
+                if ($instance->getIncrementing()) {
+                    $table->id($instance->getKeyName());
+                    return;
+                }
+
+                // @codeCoverageIgnoreStart
+                $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing()); // @codeCoverageIgnore
+            } else {
+                $method = Column::TYPE_MAP[$instance->getKeyType()] ?? null;
+                if (null === $method) {
+                    return;
+                }
+
+                $table->$method($instance->getKeyName());
+                // @codeCoverageIgnoreEnd
+            }
+        }
+
+        $table->primary($instance->getKeyName()); // @codeCoverageIgnore
     }
 
     protected static function inferTimestamps(string $modelName, Blueprint $table)
@@ -406,7 +484,7 @@ class Manager
         $instance = new $modelName();
 
         if (!$instance->usesTimestamps()) {
-            return;
+            return; // @codeCoverageIgnore
         }
 
         $createdAtColumn = $instance->getCreatedAtColumn();
@@ -414,11 +492,11 @@ class Manager
 
         foreach ($table->getColumns() as $column) {
             if ($column->name === $createdAtColumn) {
-                $createdAtColumn = null;
+                $createdAtColumn = null; // @codeCoverageIgnore
             }
 
             if ($column->name === $updatedAtColumn) {
-                $updatedAtColumn = null;
+                $updatedAtColumn = null; // @codeCoverageIgnore
             }
         }
 
@@ -444,7 +522,7 @@ class Manager
 
         foreach ($table->getColumns() as $column) {
             if ($column->name === $deletedAtColumn) {
-                return;
+                return; // @codeCoverageIgnore
             }
         }
 
@@ -583,7 +661,7 @@ class Manager
             }
 
             if (isset($renamedIndexes[$fromCommand->index])) {
-                continue;
+                continue; // @codeCoverageIgnore
             }
 
             $droppedIndexes[] = $fromCommand;

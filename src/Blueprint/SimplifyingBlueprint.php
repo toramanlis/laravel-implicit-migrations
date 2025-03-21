@@ -82,7 +82,6 @@ class SimplifyingBlueprint extends Blueprint
             }
 
             $remainingCommands[] = $command;
-            break;
         }
 
         $this->commands = $remainingCommands;

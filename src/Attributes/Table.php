@@ -8,13 +8,12 @@ use Illuminate\Database\Schema\Blueprint;
 use ReflectionClass;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class Table extends MigrationAttribute
+class Table extends MigrationAttribute implements AppliesToBlueprint
 {
-    public ?string $name = null;
-
     public string $prefix = '';
 
     public function __construct(
+        public ?string $name = null,
         protected ?string $engine = null,
         protected ?string $charset = null,
         protected ?string $collation = null

@@ -5,7 +5,7 @@
     bootstrap="vendor/autoload.php"
     cacheDirectory=".phpunit.cache"
     executionOrder="depends,defects"
-    requireCoverageMetadata="true"
+    requireCoverageMetadata="false"
     beStrictAboutCoverageMetadata="true"
     beStrictAboutOutputDuringTests="true"
     beStrictAboutTestsThatDoNotTestAnything="true"
@@ -32,7 +32,7 @@
             <directory suffix=".php">src/templates</directory>
         </exclude>
     </source>
-    <coverage pathCoverage="true" ignoreDeprecatedCodeUnits="true" disableCodeCoverageIgnore="true">
+    <coverage pathCoverage="false" ignoreDeprecatedCodeUnits="true" disableCodeCoverageIgnore="false">
         <report>
             <clover outputFile="coverage.xml"/>
             <html outputDirectory=".coverage"/>

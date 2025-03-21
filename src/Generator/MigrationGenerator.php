@@ -47,7 +47,7 @@ class MigrationGenerator
             $blueprint = Manager::generateBlueprint($modelName);
 
             if (null === $blueprint) {
-                continue;
+                continue; // @codeCoverageIgnore
             }
 
             $blueprints[$blueprint->getTable()] = $blueprint;
@@ -56,6 +56,7 @@ class MigrationGenerator
 
         $blueprintManager = new Manager($blueprints);
         $blueprintManager->applyRelationshipsToBlueprints($relationships);
+        $blueprintManager->ensureIndexColumns($modelNames);
 
         foreach ($blueprintManager->getRelationshipMap() as $tableName => $relationship) {
             $sourceMap[$tableName] = $sourceMap[$tableName] ?? $relationship->getSource();

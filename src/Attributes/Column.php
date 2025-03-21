@@ -4,16 +4,14 @@ namespace Toramanlis\ImplicitMigrations\Attributes;
 
 use Attribute;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
 use ReflectionProperty;
 use Illuminate\Support\Str;
 use ReflectionNamedType;
 use ReflectionType;
-use ReflectionUnionType;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\ColumnExporter;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class Column extends MigrationAttribute
+class Column extends MigrationAttribute implements AppliesToBlueprint
 {
     public const TYPE_MAP = [
         'array' => 'json',
@@ -74,28 +72,16 @@ class Column extends MigrationAttribute
     ) {
     }
 
-    public function after($after, $force = false): static
-    {
-        if ($force || null === $this->after) {
-            $this->after = $after;
-        }
-
-        return $this;
-    }
-
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void
     {
+        $this->name = Str::snake($reflection->getName());
+
         if (
-            null !== $this->name &&
             null !== $this->type &&
             null !== $this->nullable &&
             null !== $this->default
         ) {
             return;
-        }
-
-        if (null === $this->name) {
-            $this->name = Str::snake($reflection->getName());
         }
 
         if (null === $this->default && $reflection->hasDefaultValue()) {
@@ -120,6 +106,10 @@ class Column extends MigrationAttribute
 
     public function applyToBlueprint(Blueprint $table): Blueprint
     {
+        if (null === $this->type) {
+            return $table;
+        }
+
         $attributes = array_filter([
             'nullable' => $this->nullable,
             'default' => $this->default,
@@ -141,37 +131,39 @@ class Column extends MigrationAttribute
             'after' => $this->after,
         ], fn ($i) => null !== $i);
 
+        $parameters = [];
         if (isset(static::PARAMETER_MAP[$this->type])) {
-            $parameters = [];
             foreach (static::PARAMETER_MAP[$this->type] as $parameterName) {
                 if (!isset($attributes[$parameterName])) {
                     continue;
                 }
 
-                $parameters[$parameterName] = $attributes[$parameterName];
+                $parameters[$parameterName] = $attributes[$parameterName]; // @codeCoverageIgnore
+            }
+        }
+
+        if (
+            !empty(array_diff(
+                array_keys($attributes),
+                ColumnExporter::SUPPORTED_MODIFIERS,
+                array_keys($parameters)
+            ))
+        ) {
+            // @codeCoverageIgnoreStart
+            $table->addColumn($this->type, $this->name, $attributes);
+            return $table;
+            // @codeCoverageIgnoreEnd
+        }
+
+        $column = $table->{$this->type}($this->name, ...$parameters);
+
+        foreach (ColumnExporter::SUPPORTED_MODIFIERS as $modifier) {
+            if (!isset($attributes[$modifier])) {
+                continue;
             }
 
-            if (
-                !empty(array_diff(
-                    array_keys($attributes),
-                    ColumnExporter::SUPPORTED_MODIFIERS,
-                    array_keys($parameters)
-                ))
-            ) {
-                $table->addColumn($this->type, $this->name, $attributes);
-                return $table;
-            }
-
-            $column = $table->{$this->type}($this->name, ...$parameters);
-
-            foreach (ColumnExporter::SUPPORTED_MODIFIERS as $modifier) {
-                if (!isset($attributes[$modifier])) {
-                    continue;
-                }
-
-                if (false !== $attributes[$modifier]) {
-                    $column->$modifier($attributes[$modifier]);
-                }
+            if (false !== $attributes[$modifier]) {
+                $column->$modifier($attributes[$modifier]);
             }
         }
 

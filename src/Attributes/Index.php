@@ -9,8 +9,8 @@ use ReflectionProperty;
 use Illuminate\Support\Str;
 use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
 
-#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
-class Index extends MigrationAttribute
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
+class Index extends MigrationAttribute implements AppliesToBlueprint
 {
     protected ?array $columns;
 
@@ -19,21 +19,44 @@ class Index extends MigrationAttribute
     public function __construct(
         protected ?string $name = null,
         string $type = 'index',
-        null|array|string $columns = null,
+        null|array|string $column = null,
         protected ?string $algorithm = null,
         protected ?string $language = null
     ) {
         $this->type = IndexType::from(strtolower($type));
-        $this->columns = is_string($columns) ? [$columns] : $columns;
+        $this->columns = is_string($column) ? [$column] : $column;
     }
 
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void
     {
         if (null !== $this->columns) {
-            return;
+            return; // @codeCoverageIgnore
         }
 
         $this->columns = [Str::snake($reflection->getName())];
+    }
+
+    public function ensureColumns(Blueprint $table): void
+    {
+        if (is_null($this->columns)) {
+            return; // @codeCoverageIgnore
+        }
+
+        $existingColumns = array_map(fn ($column) => $column->name, $table->getColumns());
+        $missingColumns = [];
+        foreach ($this->columns as $column) {
+            if (!in_array($column, $existingColumns)) {
+                $missingColumns[] = $column;
+            }
+        }
+
+        if (empty($missingColumns)) {
+            return;
+        }
+
+        foreach ($missingColumns as $column) {
+            $table->string($column);
+        }
     }
 
     public function applyToBlueprint(Blueprint $table): Blueprint

@@ -1,0 +1,35 @@
+<?php
+
+use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
+use Illuminate\Database\Schema\Blueprint;
+
+return new class extends ImplicitMigration
+{
+    protected const TABLE_NAME = 'products';
+
+    protected const MODE = 'create';
+
+    protected const SOURCE = 'Toramanlis\Tests\Data\Models\Product';
+
+    public function tableUp(Blueprint $table): void
+    {
+        $table->id('p_id');
+        $table->string('name');
+        $table->string('category');
+        $table->string('brand')->default('TorCorp')->nullable();
+        $table->integer('stock')->nullable();
+        $table->timestamps();
+        $table->softDeletes();
+
+        $table->index('name', 'products_name_index');
+        $table->index('stock', 'products_stock_index');
+
+        $table->charset('utf8mb4');
+        $table->collation('utf8mb4_unicode_ci');
+    }
+
+    public function tableDown(Blueprint $table): void
+    {
+        $table->drop();
+    }
+};

@@ -58,6 +58,7 @@ class TableExporter extends Exporter
         }
 
         $softDeletes = null;
+        $ids = [];
         foreach ($this->definition->getColumns() as $column) {
             if ($hasTimestamps && in_array($column->name, ['created_at', 'updated_at'])) {
                 continue;
@@ -72,11 +73,17 @@ class TableExporter extends Exporter
             }
 
             if ('id' === $exporter->getCollapsedType()) {
-                array_unshift($columnExports, [$columnExport]);
+                if ('id' == $column->name) {
+                    array_unshift($ids, $columnExport);
+                } else {
+                    $ids[] = $columnExport;
+                }
             } else {
                 $columnExports[] = $columnExport;
             }
         }
+
+        array_unshift($columnExports, ...$ids);
 
         if ($hasTimestamps) {
             $columnExports[] = static::exportMethodCall('timestamps', $precision ? [$precision] : []);
@@ -97,7 +104,7 @@ class TableExporter extends Exporter
 
         foreach ($this->definition->getCommands() as $command) {
             if (!$command instanceof Fluent) {
-                continue;
+                continue; // @codeCoverageIgnore
             }
 
             $type = IndexType::tryFrom(strtolower($command->name));
