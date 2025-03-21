@@ -463,7 +463,7 @@ class Manager
                 }
 
                 // @codeCoverageIgnoreStart
-                $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing()); // @codeCoverageIgnore
+                $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());
             } else {
                 $method = Column::TYPE_MAP[$instance->getKeyType()] ?? null;
                 if (null === $method) {
