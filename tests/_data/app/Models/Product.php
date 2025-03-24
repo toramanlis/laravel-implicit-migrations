@@ -25,6 +25,9 @@ class Product extends Model
     #[Column('string', true, 'TorCorp')]
     public string $brand = 'TorCorp';
 
+    #[Column]
+    public string $manufacturer;
+
     public ?string $description;
 
     #[Column]

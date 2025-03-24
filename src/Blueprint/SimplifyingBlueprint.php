@@ -16,6 +16,42 @@ class SimplifyingBlueprint extends Blueprint
         parent::__construct($connection, $prefix . $tableName);
     }
 
+    public function applyColumnIndexes()
+    {
+        $applicables = [IndexType::Primary->value, IndexType::Unique->value, IndexType::Index->value];
+        foreach ($this->commands as $command) {
+            if (
+                !in_array($command->name, $applicables) ||
+                1 !== count($command->columns)
+            ) {
+                continue;
+            }
+
+            foreach ($this->columns as $column) {
+                if ($column->name === $command->columns[0]) {
+                    $defaultName = $this->createIndexName($command->name, $command->columns);
+                    $column->{$command->name} = $command->index === $defaultName ? true : $command->index;
+                    $this->dropIndex($command->index);
+                    break;
+                }
+            }
+        }
+    }
+
+    public function separateIndexesFromColumns()
+    {
+        foreach ($this->columns as $column) {
+            foreach ([IndexType::Primary->value, IndexType::Unique->value, IndexType::Index->value] as $indexType) {
+                if (!$column->$indexType) {
+                    continue;
+                }
+
+                $this->$indexType($column->name, true === $column->$indexType ? null : $column->$indexType);
+                unset($column->$indexType);
+            }
+        }
+    }
+
     public function addColumn($type, $name, array $parameters = [])
     {
         parent::addColumn($type, $name, $parameters);
@@ -55,7 +91,7 @@ class SimplifyingBlueprint extends Blueprint
 
     public function renameColumn($from, $to)
     {
-        foreach ($this->columns as $i => $column) {
+        foreach ($this->columns as $column) {
             if ($column->name !== $from) {
                 continue;
             }
@@ -69,6 +105,8 @@ class SimplifyingBlueprint extends Blueprint
 
     public function renameIndex($from, $to)
     {
+        $this->separateIndexesFromColumns();
+
         foreach ($this->commands as $command) {
             if (null === IndexType::tryFrom($command->name) || $command->index !== $from) {
                 continue;

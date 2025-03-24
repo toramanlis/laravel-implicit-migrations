@@ -13,11 +13,9 @@ return new class extends ImplicitMigration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
-        $table->string('order_id');
+        $table->id()->primary();
+        $table->string('order_id')->index();
         $table->timestamps();
-
-        $table->index('order_id', 'refunds_order_id_index');
     }
 
     public function tableDown(Blueprint $table): void

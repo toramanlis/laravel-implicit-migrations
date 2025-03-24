@@ -4,6 +4,8 @@ namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Database\Schema\ColumnDefinition;
+use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
+use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 
 class ColumnExporter extends Exporter
 {
@@ -39,13 +41,37 @@ class ColumnExporter extends Exporter
     {
     }
 
+    protected function buildIndexModifiers(bool $up = true)
+    {
+        $modifiers = [];
+
+        foreach ([IndexType::Primary->value, IndexType::Unique->value, IndexType::Index->value] as $indexType) {
+            if (!$this->definition->$indexType) {
+                continue;
+            }
+
+            $parameters = true === $this->definition->$indexType ? [] : [$this->definition->$indexType];
+            $modifiers[] = static::makeModifier($indexType, $parameters);
+        }
+
+        return $modifiers;
+    }
+
     protected function exportUp(): string
     {
         $this->attributes = array_filter($this->definition->getAttributes());
-        unset($this->attributes['type'], $this->attributes['name']);
+        unset(
+            $this->attributes['type'],
+            $this->attributes['name'],
+            $this->attributes['change'],
+            $this->attributes[IndexType::Primary->value],
+            $this->attributes[IndexType::Unique->value],
+            $this->attributes[IndexType::Index->value]
+        );
 
         $this->runCollapsables();
         $modifiers = $this->extractModifiers($this->attributes);
+        $indexModifiers = $this->buildIndexModifiers();
         $collapsedModifiers = $this->extractModifiers($this->collapsedAttributes);
 
         if (
@@ -70,13 +96,13 @@ class ColumnExporter extends Exporter
                 $parameters[] = $this->definition->name;
             }
 
-            return $this->exportMethodCall($type, $parameters, $modifiers);
+            return $this->exportMethodCall($type, $parameters, array_merge($modifiers, $indexModifiers));
         } else {
             return $this->exportMethodCall('addColumn', [
                 $this->definition->type,
                 $this->definition->name,
                 $this->attributes,
-            ], $modifiers);
+            ], array_merge($modifiers, $indexModifiers));
         }
     }
 

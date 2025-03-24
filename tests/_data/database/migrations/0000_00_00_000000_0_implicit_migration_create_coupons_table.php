@@ -13,7 +13,7 @@ return new class extends ImplicitMigration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
+        $table->id()->primary();
         $table->unsignedBigInteger('user_id');
         $table->timestamps();
 

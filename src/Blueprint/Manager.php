@@ -2,15 +2,11 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
-use Exception;
-use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -37,19 +33,17 @@ class Manager
     protected array $relationshipMap = [];
 
     public function __construct(
-        /** @var array<Blueprint> */
+        /** @var array<SimplifyingBlueprint> */
         protected array $blueprints
     ) {
     }
 
-    public static function makeBlueprint(string $tableName, $prefix = '')
+    public static function makeBlueprint(string $tableName, $prefix = ''): SimplifyingBlueprint
     {
-        /** @var Connection */
-        $connection = DB::connection();
-        return new Blueprint($connection, $prefix . $tableName);
+        return new SimplifyingBlueprint($prefix . $tableName);
     }
 
-    /** @return array<Blueprint>  */
+    /** @return array<SimplifyingBlueprint>  */
     public function getBlueprints(): array
     {
         return $this->blueprints;
@@ -105,7 +99,7 @@ class Manager
 
     /**
      * @param array<ImplicitMigration> $migrations
-     * @return array<string,Blueprint>
+     * @return array<string,SimplifyingBlueprint>
      */
     public static function mergeMigrationsToBlueprints(array $migrations): array
     {
@@ -114,7 +108,9 @@ class Manager
             $blueprints[$migration->getSource()] = $blueprints[$migration->getSource()]
                 ?? new SimplifyingBlueprint($migration->getTableNameNew());
 
-            $migration->tableUp($blueprints[$migration->getSource()]);
+            $blueprint = $blueprints[$migration->getSource()];
+            $migration->tableUp($blueprint);
+            $blueprint->separateIndexesFromColumns();
         }
 
         return $blueprints;
@@ -400,7 +396,7 @@ class Manager
         return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
     }
 
-    public static function generateBlueprint(string $modelName): ?Blueprint
+    public static function generateBlueprint(string $modelName): ?SimplifyingBlueprint
     {
         $attributes = static::getMigrationAttributes($modelName);
 
@@ -475,11 +471,10 @@ class Manager
             if ('int' === $instance->getKeyType()) {
                 if ($instance->getIncrementing()) {
                     $table->id($instance->getKeyName());
-                    return;
+                } else {
+                    // @codeCoverageIgnoreStart
+                    $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());
                 }
-
-                // @codeCoverageIgnoreStart
-                $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());
             } else {
                 $method = Column::TYPE_MAP[$instance->getKeyType()] ?? null;
                 if (null === $method) {
@@ -545,9 +540,9 @@ class Manager
         $table->softDeletes($deletedAtColumn);
     }
 
-    public static function getDiff(Blueprint $from, Blueprint $to): BlueprintDiff
+    public static function getDiff(SimplifyingBlueprint $from, SimplifyingBlueprint $to): BlueprintDiff
     {
-        [$modifiedColumns, $droppedColumns, $renamedColumns, $addedColumns] = static::getColumnDiffs($from, $to);
+        [$modifiedColumns, $droppedColumns, $addedColumns] = static::getColumnDiffs($from, $to);
         [$droppedIndexes, $renamedIndexes, $addedIndexes] = static::getIndexDiffs($from, $to);
 
         return new BlueprintDiff(
@@ -555,7 +550,6 @@ class Manager
             $to,
             $modifiedColumns,
             $droppedColumns,
-            $renamedColumns,
             $addedColumns,
             $droppedIndexes,
             $renamedIndexes,
@@ -592,7 +586,6 @@ class Manager
         $modifiedColumns = [];
         $droppedColumns = [];
         $addedColumns = [];
-        $renamedColumns = [];
 
         foreach ($from->getColumns() as $fromColumn) {
             foreach ($to->getColumns() as $toColumn) {
@@ -602,23 +595,13 @@ class Manager
 
                 if ($fromColumn->name === $toColumn->name) {
                     if (static::attributesEqual($fromColumn, $toColumn)) {
-                        unset($renamedColumns[$fromColumn->name]);
                         $unchangedColumns[] = $fromColumn->name;
                         continue 2;
                     }
 
                     $modifiedColumns[] = $fromColumn->name;
                     continue 2;
-                } else {
-                    if (static::attributesEqual($fromColumn, $toColumn, ['name'])) {
-                        $renamedColumns[$fromColumn->name] = $toColumn->name;
-                        continue;
-                    }
                 }
-            }
-
-            if (isset($renamedColumns[$fromColumn->name])) {
-                continue;
             }
 
             $droppedColumns[] = $fromColumn;
@@ -627,8 +610,7 @@ class Manager
         foreach ($to->getColumns() as $toColumn) {
             if (
                 in_array($toColumn->name, $unchangedColumns) ||
-                in_array($toColumn->name, $modifiedColumns) ||
-                in_array($toColumn->name, $renamedColumns)
+                in_array($toColumn->name, $modifiedColumns)
             ) {
                 continue;
             }
@@ -636,7 +618,7 @@ class Manager
             $addedColumns[] = $toColumn;
         }
 
-        return [$modifiedColumns, $droppedColumns, $renamedColumns, $addedColumns];
+        return [$modifiedColumns, $droppedColumns, $addedColumns];
     }
 
     /**

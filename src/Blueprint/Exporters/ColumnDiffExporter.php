@@ -10,6 +10,13 @@ class ColumnDiffExporter extends ColumnExporter
         return parent::joinModifiers($modifiers);
     }
 
+    /**
+     * @codeCoverageIgnore
+     *
+     * @param string $from
+     * @param string $to
+     * @return string
+     */
     public static function renameColumn(string $from, string $to)
     {
         $parameters = static::exportParameters([$from, $to]);

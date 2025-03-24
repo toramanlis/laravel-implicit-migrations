@@ -15,8 +15,9 @@ return new class extends ImplicitMigration
     {
         $table->renameColumn('name', 'title');
         $table->unsignedBigInteger('category')->change();
-        $table->dropColumn('stock');
         $table->string('sku')->unique();
+
+        $table->dropColumn('manufacturer');
 
         $table->renameIndex('products_stock_index', 'products_quantity_index');
         $table->dropIndex('products_name_index');
@@ -26,7 +27,6 @@ return new class extends ImplicitMigration
     {
         $table->renameColumn('title', 'name');
         $table->dropColumn('sku');
-        $table->integer('stock')->nullable()->after('brand');
 
         $table->renameIndex('products_quantity_index', 'products_stock_index');
         $table->index('name', 'products_name_index');

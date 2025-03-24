@@ -15,7 +15,7 @@ return new class extends ImplicitMigration
     {
         $table->rememberToken()->change();
 
-        $table->dropIndex('number_wangs_none_index');
+        $table->dropIndex('numberwangs_none_index');
 
         $table->charset('utf8');
     }
@@ -24,7 +24,7 @@ return new class extends ImplicitMigration
     {
         $table->rememberToken()->nullable()->change();
 
-        $table->index('none', 'number_wangs_none_index', 'some');
+        $table->index('none', 'numberwangs_none_index', 'some');
 
         $table->charset('utf16');
     }

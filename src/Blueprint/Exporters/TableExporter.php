@@ -2,14 +2,14 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\Exporter;
 use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
+use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 
 class TableExporter extends Exporter
 {
-    public function __construct(protected Blueprint $definition)
+    public function __construct(protected SimplifyingBlueprint $definition)
     {
     }
 
@@ -57,6 +57,8 @@ class TableExporter extends Exporter
             }
         }
 
+        $this->definition->applyColumnIndexes();
+
         $softDeletes = null;
         $ids = [];
         foreach ($this->definition->getColumns() as $column) {
@@ -98,8 +100,6 @@ class TableExporter extends Exporter
 
     protected function exportIndexes(): string
     {
-        $state = $this->definition->getState();
-
         $indexExports = [];
 
         foreach ($this->definition->getCommands() as $command) {
@@ -119,7 +119,7 @@ class TableExporter extends Exporter
             $indexExport = IndexExporter::exportDefinition($indexFluent);
 
             if (IndexType::Primary === $type) {
-                array_unshift($indexExports, $indexExport);
+                array_unshift($indexExports, $indexExport); // @codeCoverageIgnore
             } else {
                 $indexExports[] = $indexExport;
             }

@@ -13,7 +13,7 @@ return new class extends ImplicitMigration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
+        $table->id()->primary();
         $table->id('affiliate_id');
         $table->unsignedBigInteger('promotion_id');
         $table->unsignedBigInteger('campaign_id');

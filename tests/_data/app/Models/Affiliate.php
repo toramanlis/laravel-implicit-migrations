@@ -16,7 +16,7 @@ class Affiliate extends Model
     #[ForeignKey(on: Store::class)]
     public $store_id;
 
-    #[Unique]
+    #[Unique(name: 'affiliate_code_no_duplicate')]
     #[Column(type: 'string', nullable: true, default: '')]
     public $code;
 }

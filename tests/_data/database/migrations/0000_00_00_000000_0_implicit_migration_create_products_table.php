@@ -13,16 +13,14 @@ return new class extends ImplicitMigration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id('p_id');
-        $table->string('name');
+        $table->id('p_id')->primary();
+        $table->string('name')->index();
         $table->string('category');
         $table->string('brand')->default('TorCorp')->nullable();
-        $table->integer('stock')->nullable();
+        $table->string('manufacturer');
+        $table->integer('stock')->index()->nullable();
         $table->timestamps();
         $table->softDeletes();
-
-        $table->index('name', 'products_name_index');
-        $table->index('stock', 'products_stock_index');
 
         $table->charset('utf8mb4');
         $table->collation('utf8mb4_unicode_ci');

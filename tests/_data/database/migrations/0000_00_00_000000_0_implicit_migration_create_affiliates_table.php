@@ -13,15 +13,14 @@ return new class extends ImplicitMigration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
+        $table->id()->primary();
         $table->id('store_id');
         $table->integer('user_id');
-        $table->string('code')->nullable();
+        $table->string('code')->nullable()->unique('affiliate_code_no_duplicate');
         $table->timestamps();
 
         $table->foreign('user_id', 'affiliates_user_id_foreign')->on('users')->references('id');
         $table->foreign('store_id', 'affiliates_store_id_foreign')->on('stores')->references('id');
-        $table->unique('code', 'affiliates_code_unique');
     }
 
     public function tableDown(Blueprint $table): void

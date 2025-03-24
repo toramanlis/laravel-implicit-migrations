@@ -2,33 +2,70 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Fluent;
 
 class BlueprintDiff
 {
     /**
-     * @param Blueprint $to
+     * @param SimplifyingBlueprint $from
+     * @param SimplifyingBlueprint $to
      * @param array<string> $modifiedColumns
      * @param array<ColumnDefinition> $droppedColumns
-     * @param array<string, string> $renamedColumns
      * @param array<ColumnDefinition> $addedColumns
      * @param array<Fluent> $droppedIndexes
      * @param array<string, string> $renamedIndexes
      * @param array<Fluent> $addedIndexes
      */
     public function __construct(
-        readonly public Blueprint $from,
-        readonly public Blueprint $to,
-        readonly public array $modifiedColumns,
-        readonly public array $droppedColumns,
-        readonly public array $renamedColumns,
-        readonly public array $addedColumns,
-        readonly public array $droppedIndexes,
-        readonly public array $renamedIndexes,
-        readonly public array $addedIndexes
+        readonly public SimplifyingBlueprint $from,
+        readonly public SimplifyingBlueprint $to,
+        public array $modifiedColumns,
+        public array $droppedColumns,
+        public array $addedColumns,
+        public array $droppedIndexes,
+        public array $renamedIndexes,
+        public array $addedIndexes
     ) {
+        $this->applyColumnIndexes();
+        $this->applyColumnIndexes(true);
+    }
+
+    protected function applyColumnIndexes(bool $reverse = false)
+    {
+        $blueprint = new SimplifyingBlueprint($this->to->getTable());
+
+        foreach ($this->getAddedColumns($reverse) as $column) {
+            $blueprint->addColumn($column->type, $column->name, $column->getAttributes());
+        }
+
+        foreach ($this->getAddedIndexes($reverse) as $index) {
+            $blueprint->{$index->name}($index->columns, $index->index, $index->algorithm);
+        }
+
+        foreach ($this->getRenamedIndexes($reverse) as $from => $to) {
+            $blueprint->renameIndex($from, $to);
+        }
+
+        $blueprint->applyColumnIndexes();
+
+        if ($reverse) {
+            $this->droppedColumns = $blueprint->getColumns();
+            $this->droppedIndexes = [];
+            $addedIndexes = &$this->droppedIndexes;
+        } else {
+            $this->addedColumns = $blueprint->getColumns();
+            $this->addedIndexes = [];
+            $addedIndexes = &$this->addedIndexes;
+        }
+
+        foreach ($blueprint->getCommands() as $command) {
+            if (null === IndexType::tryFrom($command->name)) {
+                continue;
+            }
+
+            $addedIndexes[] = $command;
+        }
     }
 
     public function none()
@@ -73,12 +110,6 @@ class BlueprintDiff
         return $modifiedColumns;
     }
 
-    public function getRenamedColumns(bool $reverse = false)
-    {
-        $renames = $this->renamedColumns;
-        return $reverse ? array_flip($renames) : $renames;
-    }
-
     public function getRenamedIndexes(bool $reverse = false)
     {
         $renames = $this->renamedIndexes;
@@ -92,20 +123,7 @@ class BlueprintDiff
 
     public function getDroppedIndexes(bool $reverse = false)
     {
-        $droppedIndexes = $reverse ? $this->addedIndexes : $this->droppedIndexes;
-        $droppedColumnNames = array_map(fn ($i) => $i->name, $this->getDroppedColumns($reverse));
-
-        foreach ($droppedIndexes as $i => $index) {
-            foreach ($index->columns as $columnName) {
-                if (!in_array($columnName, $droppedColumnNames)) {
-                    continue 2;
-                }
-            }
-
-            unset($droppedIndexes[$i]);
-        }
-
-        return $droppedIndexes;
+        return $reverse ? $this->addedIndexes : $this->droppedIndexes;
     }
 
     public function getOptionChange(string $optionName, bool $reverse = false): ?string

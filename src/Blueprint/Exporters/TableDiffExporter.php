@@ -18,12 +18,11 @@ class TableDiffExporter extends Exporter
             $this->exportRename(),
             null,
             $this->exportDroppedColumns(),
-            $this->exportRenamedColumns(),
             $this->exportModifiedColumns(),
             $this->exportAddedColumns(),
             null,
             $this->exportDroppedIndexes(),
-            $this->exportRenamesIndexes(),
+            $this->exportRenamedIndexes(),
             $this->exportAddedIndexes(),
             null,
             $this->exportOptions(),
@@ -36,12 +35,11 @@ class TableDiffExporter extends Exporter
             $this->exportRename(true),
             null,
             $this->exportDroppedColumns(true),
-            $this->exportRenamedColumns(true),
             $this->exportModifiedColumns(true),
             $this->exportAddedColumns(true),
             null,
             $this->exportDroppedIndexes(true),
-            $this->exportRenamesIndexes(true),
+            $this->exportRenamedIndexes(true),
             $this->exportAddedIndexes(true),
             null,
             $this->exportOptions(true),
@@ -86,17 +84,6 @@ class TableDiffExporter extends Exporter
 
         foreach ($this->definition->getDroppedColumns($reverse) as $column) {
             $exports[] = ColumnExporter::exportDefinition($column, ColumnExporter::MODE_DOWN);
-        }
-
-        return $this->joinExports($exports);
-    }
-
-    protected function exportRenamedColumns(bool $reverse = false): string
-    {
-        $exports = [];
-
-        foreach ($this->definition->getRenamedColumns($reverse) as $from => $to) {
-            $exports[] = ColumnDiffExporter::renameColumn($from, $to);
         }
 
         return $this->joinExports($exports);
@@ -147,7 +134,7 @@ class TableDiffExporter extends Exporter
         return $this->joinExports($exports);
     }
 
-    protected function exportRenamesIndexes(bool $reverse = false): string
+    protected function exportRenamedIndexes(bool $reverse = false): string
     {
         $exports = [];
 

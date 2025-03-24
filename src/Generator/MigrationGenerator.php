@@ -7,12 +7,13 @@ use Toramanlis\ImplicitMigrations\Blueprint\BlueprintDiff;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableDiffExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Manager;
+use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
 
 /** @package Toramanlis\ImplicitMigrations\Generator */
 class MigrationGenerator
 {
-    /** @var array<string, Blueprint> */
+    /** @var array<string, SimplifyingBlueprint> */
     protected array $existingBlueprints = [];
     protected TemplateManager $templateManager;
 

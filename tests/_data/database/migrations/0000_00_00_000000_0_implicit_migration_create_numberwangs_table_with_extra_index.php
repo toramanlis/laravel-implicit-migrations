@@ -13,7 +13,7 @@ return new class extends ImplicitMigration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
+        $table->id()->primary();
         $table->tinyIncrements('tiny');
         $table->smallIncrements('small');
         $table->mediumIncrements('medium');
@@ -28,7 +28,7 @@ return new class extends ImplicitMigration
         $table->string('none');
         $table->timestamps();
 
-        $table->index('none', 'number_wangs_none_index', 'some');
+        $table->index('none', 'numberwangs_none_index', 'some');
 
         $table->charset('utf16');
     }

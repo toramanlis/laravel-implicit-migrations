@@ -143,6 +143,12 @@ abstract class Exporter
         return "\$table->{$methodName}({$parameters}){$joinedModifiers};";
     }
 
+    protected static function makeModifier($name, $parameters)
+    {
+        $parameterString = static::exportParameters($parameters);
+        return "->{$name}({$parameterString})";
+    }
+
     protected static function extractModifiers(&$attributes)
     {
         $modifiers = [];
@@ -152,8 +158,7 @@ abstract class Exporter
                 continue;
             }
 
-            $parameters = true === $value ? '' : static::exportParameters([$value]);
-            $modifiers[] = "->{$attributeName}({$parameters})";
+            $modifiers[] = static::makeModifier($attributeName, true === $value ? [] : [$value]);
 
             unset($attributes[$attributeName]);
         }
