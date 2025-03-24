@@ -7,7 +7,7 @@ use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\Table;
 
 #[Table(charset: 'utf8')]
-class NumberWang extends Model
+class Numberwang extends Model
 {
     #[Column(type: 'tinyInteger', unsigned: true, autoIncrement: true)]
     public int $tiny;

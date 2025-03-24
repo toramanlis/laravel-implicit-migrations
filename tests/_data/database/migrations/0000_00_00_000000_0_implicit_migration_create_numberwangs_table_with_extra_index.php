@@ -5,11 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 
 return new class extends ImplicitMigration
 {
-    protected const TABLE_NAME = 'number_wangs';
+    protected const TABLE_NAME = 'numberwangs';
 
     protected const MODE = 'create';
 
-    protected const SOURCE = 'Toramanlis\Tests\Data\Models\NumberWang';
+    protected const SOURCE = 'Toramanlis\Tests\Data\Models\Numberwang';
 
     public function tableUp(Blueprint $table): void
     {

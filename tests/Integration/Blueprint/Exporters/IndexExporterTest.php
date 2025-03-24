@@ -8,11 +8,11 @@ class IndexExporterTest extends BaseTestCase
 {
     public function testDropsIndex()
     {
-        $this->carryModels(['NumberWang.php']);
+        $this->carryModels(['Numberwang.php']);
         $this->carryMigrations([
-            '0000_00_00_000000_0_implicit_migration_create_number_wangs_table_with_extra_index.php'
+            '0000_00_00_000000_0_implicit_migration_create_numberwangs_table_with_extra_index.php'
         ]);
         $this->generate();
-        $this->expectMigration('update_number_wangs_table');
+        $this->expectMigration('update_numberwangs_table');
     }
 }

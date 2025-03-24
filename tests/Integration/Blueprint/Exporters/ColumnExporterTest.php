@@ -8,8 +8,8 @@ class ColumnExporterTest extends BaseTestCase
 {
     public function testCollapsesColumns()
     {
-        $this->carryModels(['NumberWang.php']);
+        $this->carryModels(['Numberwang.php']);
         $this->generate();
-        $this->expectMigration('create_number_wangs_table');
+        $this->expectMigration('create_numberwangs_table');
     }
 }
