@@ -5,19 +5,17 @@ namespace Toramanlis\ImplicitMigrations\Console\Commands;
 use FilesystemIterator;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use ReflectionClass;
 use SplFileInfo;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Toramanlis\ImplicitMigrations\Generator\MigrationGenerator;
-use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
 
 #[AsCommand(name: 'implicit-migrations:generate')]
 class GenerateMigrationCommand extends Command
 {
-    protected const TEMPLATE_NAME = 'migration.php.tpl';
-
     /** @var string */
     protected $signature = 'implicit-migrations:generate {models?* : The model to generate migration for}';
 
@@ -40,9 +38,9 @@ class GenerateMigrationCommand extends Command
             $this->getModelNames(Config::get('database.model_paths'));
 
         $migrations = $this->getImplicitMigrations();
-        $generator = App::make(MigrationGenerator::class, [
-            'templateName' => static::TEMPLATE_NAME,
-            'existingMigrations' => $migrations]);
+
+        /** @var MigrationGenerator */
+        $generator = App::make(MigrationGenerator::class, ['existingMigrations' => $migrations]);
 
         $migrationData = $generator->generate($this->modelNames);
 
@@ -108,7 +106,7 @@ class GenerateMigrationCommand extends Command
                 $fileName = $migrationFile->getRealPath();
                 $migration = include($fileName);
 
-                if (!$migration instanceof ImplicitMigration) {
+                if (!$migration instanceof Migration || !method_exists($migration, 'getSource')) {
                     continue;
                 }
 

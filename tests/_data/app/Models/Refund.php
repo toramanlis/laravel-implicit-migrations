@@ -1,6 +1,6 @@
 <?php
 
-namespace Toramanlist\Tests\Data\Models;
+namespace Toramanlis\Tests\Data\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Toramanlis\ImplicitMigrations\Attributes\Index;

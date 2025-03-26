@@ -1,27 +1,37 @@
 <?php
 
-use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Toramanlis\Tests\Data\Models\Coupon as Source;
 
-return new class extends ImplicitMigration
+return new class extends Migration
 {
-    protected const TABLE_NAME = 'coupons';
+    public const TABLE_NAME = 'coupons';
 
-    protected const MODE = 'create';
-
-    protected const SOURCE = 'Toramanlis\Tests\Data\Models\Coupon';
+    public function getSource(): string
+    {
+        return Source::class;
+    }
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id()->primary();
+        $table->id();
         $table->unsignedBigInteger('promotion_id');
         $table->timestamps();
 
         $table->foreign('promotion_id', 'coupons_promotion_id_foreign')->on('promotions')->references('id');
     }
 
-    public function tableDown(Blueprint $table): void
+    public function up(): void
     {
-        $table->drop();
+        Schema::create(static::TABLE_NAME, function (Blueprint $table) {
+            $this->tableUp($table);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::drop(static::TABLE_NAME);
     }
 };

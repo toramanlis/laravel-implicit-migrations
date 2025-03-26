@@ -8,8 +8,12 @@ use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Attributes\Table;
 
+/**
+ * @package Toramanlis\Tests\Data\Models
+ *
+ * @index('products_name_index', column: ['name'])
+ */
 #[Table(charset: 'utf8mb4', collation: 'utf8mb4_unicode_ci')]
-#[Index(column: ['name'], name: 'products_name_index')]
 class Product extends Model
 {
     use SoftDeletes;

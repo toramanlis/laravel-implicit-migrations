@@ -1,20 +1,23 @@
 <?php
 
-use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Toramanlis\Tests\Data\Models\Link as Source;
 
-return new class extends ImplicitMigration
+return new class extends Migration
 {
-    protected const TABLE_NAME = 'links';
+    public const TABLE_NAME = 'links';
 
-    protected const MODE = 'create';
-
-    protected const SOURCE = 'Toramanlis\Tests\Data\Models\Link';
+    public function getSource(): string
+    {
+        return Source::class;
+    }
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id()->primary();
-        $table->id('affiliate_id');
+        $table->id();
+        $table->unsignedBigInteger('affiliate_id');
         $table->unsignedBigInteger('promotion_id');
         $table->unsignedBigInteger('campaign_id');
         $table->string('url');
@@ -30,8 +33,15 @@ return new class extends ImplicitMigration
         $table->foreign('contract_code', 'links_contract_code_foreign')->on('contracts')->references('code');
     }
 
-    public function tableDown(Blueprint $table): void
+    public function up(): void
     {
-        $table->drop();
+        Schema::create(static::TABLE_NAME, function (Blueprint $table) {
+            $this->tableUp($table);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::drop(static::TABLE_NAME);
     }
 };

@@ -1,16 +1,18 @@
 <?php
 
-use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Toramanlis\Tests\Data\Models\Item as Source;
 
-return new class extends ImplicitMigration
+return new class extends Migration
 {
-    protected const TABLE_NAME_OLD = 'items';
-    protected const TABLE_NAME_NEW = 'order_items';
+    public const TABLE_NAME = 'order_items';
 
-    protected const MODE = 'update';
-
-    protected const SOURCE = 'Toramanlis\Tests\Data\Models\Item';
+    public function getSource(): string
+    {
+        return Source::class;
+    }
 
     public function tableUp(Blueprint $table): void
     {
@@ -20,5 +22,19 @@ return new class extends ImplicitMigration
     public function tableDown(Blueprint $table): void
     {
         $table->rename('order_items', 'items');
+    }
+
+    public function up(): void
+    {
+        Schema::table('items', function (Blueprint $table) {
+            $this->tableUp($table);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table(static::TABLE_NAME, function (Blueprint $table) {
+            $this->tableDown($table);
+        });
     }
 };

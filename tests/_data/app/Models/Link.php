@@ -5,7 +5,7 @@ namespace Toramanlis\Tests\Data\Models;
 use Illuminate\Database\Eloquent\Model;
 use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
 use Toramanlis\ImplicitMigrations\Attributes\Table;
-use Toramanlist\Tests\Data\Models\Redirection;
+use Toramanlis\Tests\Data\Models\Redirection;
 
 #[Table]
 #[ForeignKey(on: 'affiliates', references: 'id')]

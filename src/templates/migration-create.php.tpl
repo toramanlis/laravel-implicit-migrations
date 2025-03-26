@@ -3,21 +3,20 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Toramanlis\Tests\Data\Models\Permission as Source;
+use <<sourceClass>> as Source;
 
 return new class extends Migration
 {
-    public const TABLE_NAME = 'permissions';
+    public const TABLE_NAME = '<<tableNameNew>>';
 
     public function getSource(): string
     {
-        return Source::class;
+        return <<source>>;
     }
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
-        $table->timestamps();
+        <<up>>
     }
 
     public function up(): void

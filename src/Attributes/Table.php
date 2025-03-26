@@ -8,7 +8,7 @@ use Illuminate\Database\Schema\Blueprint;
 use ReflectionClass;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class Table extends MigrationAttribute implements AppliesToBlueprint
+class Table extends MigrationAttribute
 {
     public string $prefix = '';
 

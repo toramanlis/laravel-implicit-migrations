@@ -8,25 +8,29 @@ use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableDiffExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Manager;
 use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
-use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
+use Illuminate\Database\Migrations\Migration;
 
 /** @package Toramanlis\ImplicitMigrations\Generator */
 class MigrationGenerator
 {
+    protected const CREATE_TEMPLATE = 'migration-create.php.tpl';
+    protected const UPDATE_TEMPLATE = 'migration-update.php.tpl';
+
     /** @var array<string, SimplifyingBlueprint> */
     protected array $existingBlueprints = [];
-    protected TemplateManager $templateManager;
+    protected TemplateManager $createTemplateManager;
+    protected TemplateManager $updateTemplateManager;
 
     /**
      * @param string $templateName
-     * @param array<ImplicitMigration> $existingMigrations
+     * @param array<Migration> $existingMigrations
      */
-    public function __construct(
-        string $templateName,
-        array $existingMigrations
-    ) {
+    public function __construct(array $existingMigrations)
+    {
         $this->existingBlueprints = Manager::mergeMigrationsToBlueprints($existingMigrations);
-        $this->templateManager = new TemplateManager($templateName);
+
+        $this->createTemplateManager = new TemplateManager(static::CREATE_TEMPLATE);
+        $this->updateTemplateManager = new TemplateManager(static::UPDATE_TEMPLATE);
     }
 
     /**
@@ -64,6 +68,7 @@ class MigrationGenerator
         }
 
         foreach ($blueprintManager->getBlueprints() as $table => $blueprint) {
+            $blueprint->removeDuplicatePrimaries();
             $source = $sourceMap[$table];
             if (!isset($this->existingBlueprints[$source])) {
                 $migrationData[$table] = $this->getMigrationItem($source, $blueprint);
@@ -79,7 +84,7 @@ class MigrationGenerator
             $migrationData[$this->existingBlueprints[$source]->getTable()] = $this->getMigrationItem(
                 $source,
                 $diff,
-                ImplicitMigration::MODE_UPDATE
+                MigrationMode::Update
             );
         }
 
@@ -89,33 +94,35 @@ class MigrationGenerator
     protected function getMigrationItem(
         string $source,
         Blueprint|BlueprintDiff $definition,
-        string $mode = ImplicitMigration::MODE_CREATE
+        MigrationMode $mode = MigrationMode::Create
     ) {
         $modelName = explode('::', $source)[0];
 
         $exporter = match ($mode) {
-            ImplicitMigration::MODE_CREATE => TableExporter::class,
-            ImplicitMigration::MODE_UPDATE => TableDiffExporter::class,
+            MigrationMode::Create => TableExporter::class,
+            MigrationMode::Update => TableDiffExporter::class,
+        };
+
+        $templateManager = match ($mode) {
+            MigrationMode::Create => $this->createTemplateManager,
+            MigrationMode::Update => $this->updateTemplateManager,
         };
 
         [$tableNameOld, $tableNameNew] = $definition instanceof Blueprint
             ? [$definition->getTable(), $definition->getTable()]
             : [$definition->from->getTable(), $definition->to->getTable()];
 
-        $tableNames = $tableNameOld === $tableNameNew
-            ? (new TemplateManager('unchanged-table-name.php.tpl'))->process(['tableName' => $tableNameOld])
-            : (new TemplateManager('different-table-names.php.tpl'))->process([
-                'tableNameOld' => $tableNameOld,
-                'tableNameNew' => $tableNameNew,
-            ]);
+        $tableRenamed = $tableNameNew !== $tableNameOld;
+        [$sourceClass, $sourceMethod] = explode('::', $source . '::');
 
         return [
             'modelName' => $modelName,
-            'mode' => $mode,
-            'contents' => $this->templateManager->process([
-                'tableNames' => $tableNames,
-                'migrationMode' => $mode,
-                'source' => $source,
+            'mode' => $mode->value,
+            'contents' => $templateManager->process([
+                'sourceClass' => $sourceClass,
+                'source' => $sourceMethod ? "Source::class . '::{$sourceMethod}'" : 'Source::class',
+                'tableNameNew' => $tableNameNew,
+                'tableNameOld' => $tableRenamed ? "'{$tableNameOld}'" : 'static::TABLE_NAME',
                 'up' => $exporter::exportDefinition($definition),
                 'down' => $exporter::exportDefinition($definition, TableExporter::MODE_DOWN),
             ]),

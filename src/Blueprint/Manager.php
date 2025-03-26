@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Fluent;
+use Illuminate\Support\Str;
+use Reflection;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -23,7 +25,6 @@ use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\Relationship as RelationshipsRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\Polymorphic;
-use Toramanlis\ImplicitMigrations\Database\Migrations\ImplicitMigration;
 use Toramanlis\ImplicitMigrations\Generator\RelationshipResolver;
 
 /** @package Toramanlis\ImplicitMigrations\Blueprint */
@@ -55,16 +56,52 @@ class Manager
         return $this->relationshipMap;
     }
 
+    protected static function getImplications(
+        ReflectionClass|ReflectionMethod|ReflectionProperty $reflection,
+        string $implicationType = MigrationAttribute::class
+    ): array {
+        $attributeReflections = $reflection->getAttributes($implicationType, ReflectionAttribute::IS_INSTANCEOF);
+        $attributes = array_map(fn (ReflectionAttribute $item) => $item->newInstance(), $attributeReflections);
+
+        foreach (explode("\n", $reflection->getDocComment()) as $docLine) {
+            if (!preg_match('/^\s*\*\s*@([a-z]+)\((.*)\)/i', $docLine, $matches)) {
+                continue;
+            }
+
+            $className = '\\Toramanlis\\ImplicitMigrations\\Attributes\\' . Str::ucfirst($matches[1]);
+
+            if (!class_exists($className)) {
+                continue; // @codeCoverageIgnore
+            }
+
+            $parameters = [];
+            $positionalAllowed = true;
+
+            foreach (explode(',', $matches[2]) as $segment) {
+                $segment = trim($segment);
+
+                if (preg_match('/([a-z0-9]+)\s*:\s*(.*)/i', $segment, $submatches)) {
+                    $parameters[trim($submatches[1])] = eval("return {$submatches[2]};");
+                    $positionalAllowed = false;
+                } elseif ($positionalAllowed) {
+                    $parameters[] = eval("return {$segment};");
+                }
+            }
+
+            $attributes[] = new $className(...$parameters);
+        }
+
+        return $attributes;
+    }
+
     protected static function getMigrationAttributes(string $modelName): array
     {
         $reflection = new ReflectionClass($modelName);
 
         $attributes = [];
 
-        $attributeReflections = $reflection
-            ->getAttributes(MigrationAttribute::class, ReflectionAttribute::IS_INSTANCEOF);
-        foreach ($attributeReflections as $attributeReflection) {
-            $attribute = $attributeReflection->newInstance();
+        $implications = static::getImplications($reflection);
+        foreach ($implications as $attribute) {
             $attribute->inferFromReflectionClass($reflection);
             $attribute->inferFromExistingData();
 
@@ -72,11 +109,10 @@ class Manager
         }
 
         foreach ($reflection->getProperties() as $propertyReflection) {
-            $attributeReflections = $propertyReflection
-                ->getAttributes(MigrationAttribute::class, ReflectionAttribute::IS_INSTANCEOF);
+            $implications = static::getImplications($propertyReflection);
 
             if (
-                0 === count($attributeReflections)
+                0 === count($implications)
                 && !static::isPropertyOff($modelName, $propertyReflection->getName())
             ) {
                 $attribute = new Column();
@@ -85,8 +121,7 @@ class Manager
                 $attributes[] = $attribute;
             }
 
-            foreach ($attributeReflections as $attributeReflection) {
-                $attribute = $attributeReflection->newInstance();
+            foreach ($implications as $attribute) {
                 $attribute->inferFromReflectionProperty($propertyReflection);
                 $attribute->inferFromExistingData();
 
@@ -98,7 +133,7 @@ class Manager
     }
 
     /**
-     * @param array<ImplicitMigration> $migrations
+     * @param array $migrations
      * @return array<string,SimplifyingBlueprint>
      */
     public static function mergeMigrationsToBlueprints(array $migrations): array
@@ -106,7 +141,7 @@ class Manager
         $blueprints = [];
         foreach ($migrations as $migration) {
             $blueprints[$migration->getSource()] = $blueprints[$migration->getSource()]
-                ?? new SimplifyingBlueprint($migration->getTableNameNew());
+                ?? new SimplifyingBlueprint($migration::TABLE_NAME);
 
             $blueprint = $blueprints[$migration->getSource()];
             $migration->tableUp($blueprint);
@@ -137,7 +172,7 @@ class Manager
             }
 
             if (
-                !count($methodReflection->getAttributes(Relationship::class))
+                !count(static::getImplications($methodReflection, Relationship::class))
                 && (
                     static::isMethodOff($modelName, $methodReflection->getShortName())
                     || !$methodReflection->hasReturnType()
@@ -167,12 +202,7 @@ class Manager
 
             /** @var IndirectRelationship $relationship */
 
-            $pivotColumnAttributes = [];
-
-            foreach ($methodReflection->getAttributes(PivotColumn::class) as $pivotColumnAttribute) {
-                $pivotColumnAttributes[] = $pivotColumnAttribute->newInstance();
-            }
-
+            $pivotColumnAttributes = static::getImplications($methodReflection, PivotColumn::class);
             $relationship->setPivotColumnAttributes($pivotColumnAttributes);
         }
 
@@ -345,7 +375,7 @@ class Manager
     protected static function isModelOff(string $modelName): bool
     {
         $modelReflection = new ReflectionClass($modelName);
-        $attributes = $modelReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
+        $attributes = static::getImplications($modelReflection, Off::class);
 
         return !Config::get('database.auto_infer_migrations') || 0 !== count($attributes);
     }
@@ -364,7 +394,7 @@ class Manager
 
         if ($modelReflection->hasProperty($propertyName)) {
             $propertyReflection = new ReflectionProperty($modelName, $propertyName);
-            $attributes = $propertyReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
+            $attributes = static::getImplications($propertyReflection, Off::class);
             $explicitlyOff = 0 !== count($attributes);
         } else {
             $explicitlyOff = false; // @codeCoverageIgnore
@@ -387,7 +417,7 @@ class Manager
 
         if ($modelReflection->hasMethod($methodName)) {
             $methodReflection = new ReflectionMethod($modelName, $methodName);
-            $attributes = $methodReflection->getAttributes(Off::class, ReflectionAttribute::IS_INSTANCEOF);
+            $attributes = static::getImplications($methodReflection, Off::class);
             $explicitlyOff = 0 !== count($attributes);
         } else {
             $explicitlyOff = false; // @codeCoverageIgnore
@@ -471,6 +501,7 @@ class Manager
             if ('int' === $instance->getKeyType()) {
                 if ($instance->getIncrementing()) {
                     $table->id($instance->getKeyName());
+                    return;
                 } else {
                     // @codeCoverageIgnoreStart
                     $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());

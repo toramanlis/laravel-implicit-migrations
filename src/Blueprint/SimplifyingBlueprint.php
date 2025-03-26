@@ -52,6 +52,28 @@ class SimplifyingBlueprint extends Blueprint
         }
     }
 
+    public function removeDuplicatePrimaries()
+    {
+        foreach ($this->commands as $command) {
+            if (
+                $command->name !== IndexType::Primary->value ||
+                count($command->columns) !== 1
+            ) {
+                continue;
+            }
+
+            foreach ($this->columns as $column) {
+                if ($column->name !== $command->columns[0]) {
+                    continue;
+                }
+
+                if ($column->autoIncrement || $column->primary) {
+                    $this->dropIndex($command->index);
+                }
+            }
+        }
+    }
+
     public function addColumn($type, $name, array $parameters = [])
     {
         parent::addColumn($type, $name, $parameters);

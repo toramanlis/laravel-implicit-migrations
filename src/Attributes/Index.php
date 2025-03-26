@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
-class Index extends MigrationAttribute implements AppliesToBlueprint
+class Index extends MigrationAttribute
 {
     protected ?array $columns;
 

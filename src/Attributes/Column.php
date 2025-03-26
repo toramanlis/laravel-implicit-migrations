@@ -11,7 +11,7 @@ use ReflectionType;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\ColumnExporter;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class Column extends MigrationAttribute implements AppliesToBlueprint
+class Column extends MigrationAttribute
 {
     public const TYPE_MAP = [
         'array' => 'json',

@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use ReflectionClass;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
-class ForeignKey extends MigrationAttribute implements AppliesToBlueprint
+class ForeignKey extends MigrationAttribute
 {
     protected string|Model $on;
     protected ?array $columns;
@@ -118,7 +118,14 @@ class ForeignKey extends MigrationAttribute implements AppliesToBlueprint
                     }
 
                     $parameters = $column->getAttributes();
-                    unset($parameters['name'], $parameters['type']);
+                    unset(
+                        $parameters['name'],
+                        $parameters['type'],
+                        $parameters['autoIncrement'],
+                        $parameters['primary'],
+                        $parameters['index'],
+                        $parameters['unique']
+                    );
                     $table->addColumn($column->type, $columnName, $parameters);
                     return;
                 }

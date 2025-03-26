@@ -4,8 +4,6 @@ namespace Tests\Integration\Console\Commands;
 
 use Toramanlis\Tests\Integration\BaseTestCase;
 
-use function Orchestra\Testbench\artisan;
-
 class GenerateMigrationCommandTest extends BaseTestCase
 {
     public function testGeneratesMigrationCommand()
