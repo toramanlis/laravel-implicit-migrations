@@ -14,13 +14,15 @@ class ImplicitMigrationsServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        if (!$this->app->runningInConsole()) {
-            return; // @codeCoverageIgnore
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                GenerateMigrationCommand::class,
+            ]);
         }
 
-        $this->commands([
-            GenerateMigrationCommand::class,
-        ]);
+        $this->publishes([
+            implode(DIRECTORY_SEPARATOR, [__DIR__, '..', 'Attributes']) => database_path('attributes'),
+        ], 'attributes');
     }
 
     public function register(): void

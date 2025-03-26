@@ -1,6 +1,11 @@
 {
     "name": "toramanlis/implicit-migrations",
     "description": "Adds a command to create migrations by Eloquent models",
+    "keywords": [
+        "model",
+        "migration",
+        "dev"
+    ],
     "type": "library",
     "require": {
         "laravel/framework": "~12"
@@ -30,10 +35,11 @@
             ]
         }
     },
-    "minimum-stability": "stable",
     "require-dev": {
-        "orchestra/testbench": "*",
-        "laravel/sail": "*",
-        "squizlabs/php_codesniffer": "*"
-    }
+        "orchestra/testbench": "^10.1",
+        "laravel/sail": "^1.41",
+        "squizlabs/php_codesniffer": "^3.12"
+    },
+    "prefer-stable": true,
+    "minimum-stability": "dev"
 }

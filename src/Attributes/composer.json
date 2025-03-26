@@ -1,0 +1,15 @@
+{
+    "name": "toramanlis/migration-attributes",
+    "description": "",
+    "authors": [
+        {
+            "name": "Timucin Bahsi",
+            "email": "timucinbahsi@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Toramanlis\\ImplicitMigrations\\Attributes\\": ""
+        }
+    }
+}
