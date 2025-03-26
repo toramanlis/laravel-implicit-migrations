@@ -1,0 +1,1 @@
+[![codecov](https://codecov.io/gh/toramanlis/implicit-migrations/graph/badge.svg?token=BH5VBNIWMI)](https://codecov.io/gh/toramanlis/implicit-migrations)
