@@ -1,5 +1,8 @@
 name: Workflow for code coverage
 on: [push, pull_request]
+permissions:
+  contents: read
+  issues: write
 jobs:
   run:
     runs-on: ubuntu-latest
