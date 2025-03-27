@@ -1,8 +1,14 @@
-/.vscode/
-/.devcontainer/
-/.phpunit.cache/
 /.coverage/
+/.devcontainer/
+/.devcontainer.example/
+/.github/
+/.phpunit.cache/
+/.vscode/
+/.wiki/
+/tests/
 /vendor/
+.phpcs.xml
+phpunit.xml
 phpunit.xml.bak
 coverage.xml
 composer.lock
