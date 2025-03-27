@@ -22,7 +22,7 @@ class ImplicitMigrationsServiceProvider extends ServiceProvider
 
         $this->publishes([
             implode(DIRECTORY_SEPARATOR, [__DIR__, '..', 'Attributes']) => database_path('attributes'),
-        ], 'attributes');
+        ], 'implication-attributes');
     }
 
     public function register(): void
