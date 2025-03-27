@@ -2,6 +2,8 @@
     "name": "toramanlis/implicit-migrations",
     "description": "Adds a command to create migrations by Eloquent models",
     "keywords": [
+        "laravel",
+        "eloquent",
         "model",
         "migration",
         "dev"
