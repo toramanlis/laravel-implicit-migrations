@@ -68,7 +68,7 @@ class GenerateMigrationCommand extends Command
 
         foreach ($modelPaths as $modelPath) {
             if (!$modelPath) {
-                continue; // @codeCoverageIgnore
+                continue;
             }
 
             $modelPath = $modelPath[0] === DIRECTORY_SEPARATOR ? $modelPath : base_path($modelPath);
@@ -86,7 +86,7 @@ class GenerateMigrationCommand extends Command
 
             $modelFile = (new ReflectionClass($className))->getFileName();
             if (!in_array($modelFile, $modelFiles)) {
-                continue; // @codeCoverageIgnore
+                continue;
             }
 
             $modelNames[$modelFile] = $className;

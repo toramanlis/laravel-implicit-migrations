@@ -13,11 +13,11 @@ use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
 class Primary extends Index
 {
     public function __construct(
-        protected ?string $name = null,
         null|array|string $column = null,
+        protected ?string $name = null,
         protected ?string $algorithm = null,
         protected ?string $language = null
     ) {
-        parent::__construct($name, 'primary', $column, $algorithm, $language);
+        parent::__construct($column, 'primary', $name, $algorithm, $language);
     }
 }

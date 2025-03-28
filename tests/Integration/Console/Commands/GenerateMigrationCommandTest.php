@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Integration\Console\Commands;
+namespace Toramanlis\Tests\Integration\Console\Commands;
 
 use Toramanlis\Tests\Integration\BaseTestCase;
 

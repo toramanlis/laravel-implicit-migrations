@@ -5,9 +5,6 @@ namespace Toramanlis\ImplicitMigrations\Attributes;
 use ReflectionClass;
 use ReflectionProperty;
 
-/**
- * @codeCoverageIgnore
- */
 abstract class MigrationAttribute
 {
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void

@@ -16,9 +16,9 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
         $table->string('to');
         $table->string('from');
+        $table->string('id')->primary();
         $table->timestamps();
     }
 

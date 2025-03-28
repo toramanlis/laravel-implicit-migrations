@@ -10,10 +10,12 @@ use Illuminate\Database\Eloquent\Relations\MorphOneOrMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\App;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\MorphicDirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\MorphicIndirectRelationship;
+use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 class RelationshipResolver
 {
@@ -28,17 +30,19 @@ class RelationshipResolver
         } elseif ($relation instanceof BelongsToMany) {
             return [static::resolveBelongsToMany($relation)];
         } else {
-            return []; // @codeCoverageIgnore
+            throw new ImplicationException(ImplicationException::CODE_RL_UNKNOWN, [$relation::class]);
         }
     }
 
     protected static function resolveHasOneOrMany(HasOneOrMany $relation): DirectRelationship
     {
         if ($relation instanceof MorphOneOrMany) {
-            $migratable = new MorphicDirectRelationship();
+            /** @var MorphicDirectRelationship */
+            $migratable = App::make(MorphicDirectRelationship::class);
             $migratable->setTypeKey($relation->getMorphType());
         } else {
-            $migratable = new DirectRelationship();
+            /** @var DirectRelationship */
+            $migratable = App::make(DirectRelationship::class);
         }
 
         $relatedModel = $relation->getRelated();
@@ -59,28 +63,31 @@ class RelationshipResolver
         $farParentTable = explode('.', $relation->getQualifiedLocalKeyName())[0];
 
         return [
-            (new DirectRelationship(
-                (new $throughModel())->getTable(),
-                (new $relatedModel())->getTable(),
-                $relation->getForeignKeyName(),
-                $relation->getSecondLocalKeyName()
-            )),
-            (new DirectRelationship(
-                $farParentTable,
-                (new $throughModel())->getTable(),
-                $relation->getFirstKeyName(),
-                $relation->getLocalKeyName()
-            )),
+            App::make(DirectRelationship::class, [
+                'parentTable' => (new $throughModel())->getTable(),
+                'relatedTable' => (new $relatedModel())->getTable(),
+                'foreignKey' => $relation->getForeignKeyName(),
+                'localKey' => $relation->getSecondLocalKeyName()
+
+            ]),
+            App::make(DirectRelationship::class, [
+                'parentTable' => $farParentTable,
+                'relatedTable' => (new $throughModel())->getTable(),
+                'foreignKey' => $relation->getFirstKeyName(),
+                'localKey' => $relation->getLocalKeyName()
+            ]),
         ];
     }
 
     protected static function resolveBelongsTo(BelongsTo $relation): DirectRelationship
     {
         if ($relation instanceof MorphTo) {
-            $migratable = new MorphicDirectRelationship();
+            /** @var MorphicDirectRelationship */
+            $migratable = App::make(MorphicDirectRelationship::class);
             $migratable->setTypeKey($relation->getMorphType());
         } else {
-            $migratable = new DirectRelationship();
+            /** @var DirectRelationship */
+            $migratable = App::make(DirectRelationship::class);
 
             $relatedModel = $relation->getRelated();
             $migratable->setParentTable((new $relatedModel())->getTable());
@@ -102,10 +109,12 @@ class RelationshipResolver
     protected static function resolveBelongsToMany(BelongsToMany $relation): IndirectRelationship
     {
         if ($relation instanceof MorphToMany) {
-            $migratable = new MorphicIndirectRelationship();
+            /** @var MorphicIndirectRelationship */
+            $migratable = App::make(MorphicIndirectRelationship::class);
             $migratable->setTypeKey($relation->getMorphType());
         } else {
-            $migratable = new IndirectRelationship();
+            /** @var IndirectRelationship */
+            $migratable = App::make(IndirectRelationship::class);
         }
 
         $migratable->setPivotTable($relation->getTable());

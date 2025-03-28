@@ -2,17 +2,11 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Relationships;
 
-use Exception;
+use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 /** @package Toramanlis\ImplicitMigrations\Blueprint\Relationships */
 class DirectRelationship extends Relationship
 {
-    /**
-     * @param null|string $parentTable
-     * @param null|string $relatedTable
-     * @param null|string $foreignKey
-     * @param null|string $localKey
-     */
     public function __construct(
         protected ?string $parentTable = null,
         protected ?string $relatedTable = null,
@@ -56,7 +50,7 @@ class DirectRelationship extends Relationship
     public function getParentTable(): string
     {
         if (null === $this->parentTable) {
-            throw new Exception('Unable to get parent table before setting'); // @codeCoverageIgnore
+            throw new ImplicationException(ImplicationException::CODE_RL_NO_PARENT);
         }
 
         return $this->parentTable;
@@ -65,7 +59,7 @@ class DirectRelationship extends Relationship
     public function getRelatedTable(): string
     {
         if (null === $this->relatedTable) {
-            throw new Exception('Unable to get related table before setting'); // @codeCoverageIgnore
+            throw new ImplicationException(ImplicationException::CODE_RL_NO_RELATED);
         }
 
         return $this->relatedTable;
@@ -74,7 +68,7 @@ class DirectRelationship extends Relationship
     public function getForeignKey(): string
     {
         if (null === $this->foreignKey) {
-            throw new Exception('Unable to get foreign key before setting'); // @codeCoverageIgnore
+            throw new ImplicationException(ImplicationException::CODE_RL_NO_FOREIGN);
         }
 
         return $this->foreignKey;
@@ -83,7 +77,7 @@ class DirectRelationship extends Relationship
     public function getLocalKey(): string
     {
         if (null === $this->localKey) {
-            throw new Exception('Unable to get local key before setting'); // @codeCoverageIgnore
+            throw new ImplicationException(ImplicationException::CODE_RL_NO_LOCAL);
         }
 
         return $this->localKey;

@@ -4,8 +4,6 @@ namespace Toramanlis\Tests\Integration\Attributes;
 
 use Toramanlis\Tests\Integration\BaseTestCase;
 
-use function Orchestra\Testbench\artisan;
-
 class ForeignKeyTest extends BaseTestCase
 {
     public function testPropertyAttribute()

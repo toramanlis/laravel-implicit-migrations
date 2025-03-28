@@ -20,13 +20,6 @@ class IndexExporter extends Exporter
     {
     }
 
-    protected function validateIndex()
-    {
-        if (null === IndexType::tryFrom(strtolower($this->definition->name))) {
-            throw new Exception("Unsupported index type: {$this->definition->name}"); // @codeCoverageIgnore
-        }
-    }
-
     public static function renameIndex(string $from, string $to)
     {
         return static::exportMethodCall('renameIndex', [$from, $to]);
@@ -34,8 +27,6 @@ class IndexExporter extends Exporter
 
     protected function exportUp(): string
     {
-        $this->validateIndex();
-
         $method = $this->definition->name;
 
         $parameters = [
@@ -58,7 +49,6 @@ class IndexExporter extends Exporter
 
     protected function exportDown(): string
     {
-        $this->validateIndex();
         return $this->exportMethodCall('drop' . ucfirst($this->definition->name), [$this->definition->index]);
     }
 }

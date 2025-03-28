@@ -16,14 +16,13 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->id();
+        $table->integer('id')->primary();
         $table->unsignedBigInteger('affiliate_id');
         $table->unsignedBigInteger('promotion_id');
         $table->unsignedBigInteger('campaign_id');
         $table->string('url');
         $table->string('old_url');
         $table->unsignedBigInteger('contract_code');
-        $table->timestamps();
 
         $table->foreign('affiliate_id', 'links_affiliate_id_foreign')->on('affiliates')->references('id');
         $table->foreign(['promotion_id', 'affiliate_id'], 'links_promotion_id_affiliate_id_foreign')->on('promotions')->references('id');

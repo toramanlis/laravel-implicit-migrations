@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Integration\Database\Migrations;
+namespace Toramanlis\Tests\Integration\Database\Migrations;
 
 use Illuminate\Database\Events\MigrationEnded;
 use Illuminate\Support\Facades\DB;

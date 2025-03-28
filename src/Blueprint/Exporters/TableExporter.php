@@ -2,6 +2,7 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\Exporter;
 use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
@@ -66,7 +67,7 @@ class TableExporter extends Exporter
                 continue;
             }
 
-            $exporter = new ColumnExporter($column);
+            $exporter = App::make(ColumnExporter::class, ['definition' => $column]);
             $columnExport = $exporter->export();
 
             if ('softDeletes' === $exporter->getCollapsedType()) {
@@ -103,10 +104,6 @@ class TableExporter extends Exporter
         $indexExports = [];
 
         foreach ($this->definition->getCommands() as $command) {
-            if (!$command instanceof Fluent) {
-                continue; // @codeCoverageIgnore
-            }
-
             $type = IndexType::tryFrom(strtolower($command->name));
 
             if (null === $type) {
@@ -119,7 +116,7 @@ class TableExporter extends Exporter
             $indexExport = IndexExporter::exportDefinition($indexFluent);
 
             if (IndexType::Primary === $type) {
-                array_unshift($indexExports, $indexExport); // @codeCoverageIgnore
+                array_unshift($indexExports, $indexExport);
             } else {
                 $indexExports[] = $indexExport;
             }

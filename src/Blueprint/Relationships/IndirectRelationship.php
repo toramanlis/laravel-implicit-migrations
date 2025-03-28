@@ -4,6 +4,7 @@ namespace Toramanlis\ImplicitMigrations\Blueprint\Relationships;
 
 use Exception;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
+use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 /** @package Toramanlis\ImplicitMigrations\Blueprint\Relationships */
 class IndirectRelationship extends Relationship
@@ -46,8 +47,6 @@ class IndirectRelationship extends Relationship
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @param array<string> $relatedTables
      * @return static
      */
@@ -68,8 +67,6 @@ class IndirectRelationship extends Relationship
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @param array<string,string> $foreignKeys
      * @return static
      */
@@ -91,8 +88,6 @@ class IndirectRelationship extends Relationship
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @param array<string,string> $localKeys
      * @return static
      */
@@ -124,8 +119,6 @@ class IndirectRelationship extends Relationship
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @param string $pivotColumn
      * @return static
      */
@@ -146,15 +139,13 @@ class IndirectRelationship extends Relationship
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @return string
      * @throws Exception
      */
     public function getPivotTable(): string
     {
         if (null === $this->pivotTable) {
-            throw new Exception('Unable to get pivot table before setting');
+            throw new ImplicationException(ImplicationException::CODE_RL_NO_PIVOT);
         }
 
         return $this->pivotTable;
@@ -179,8 +170,6 @@ class IndirectRelationship extends Relationship
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @return array<string>
      */
     public function getPivotColumns(): array

@@ -3,6 +3,7 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Blueprint\BlueprintDiff;
 
@@ -37,11 +38,9 @@ abstract class Exporter
             $totalLength = array_sum(array_map('strlen', $components));
 
             if ($totalLength > 80) {
-                // @codeCoverageIgnoreStart
                 $start = "\n\t";
                 $end = ",\n";
                 $separator = ",\n\t";
-                // @codeCoverageIgnoreEnd
             } else {
                 $start = '';
                 $end = '';
@@ -70,7 +69,7 @@ abstract class Exporter
         Blueprint|Fluent|BlueprintDiff $definition,
         int $mode = self::MODE_UP
     ): string {
-        return (new static($definition))->export($mode);
+        return App::make(static::class, ['definition' => $definition])->export($mode);
     }
 
     /**
@@ -117,7 +116,7 @@ abstract class Exporter
         $totalLength = array_sum(array_map('strlen', $items));
 
         if ($totalLength > 80) {
-            $parameters = str_replace("\n", "\n\t", implode(",\n", $items)); // @codeCoverageIgnore
+            $parameters = str_replace("\n", "\n\t", implode(",\n", $items));
         } else {
             $parameters = implode(', ', $items);
         }
@@ -126,10 +125,8 @@ abstract class Exporter
             $start = '';
             $end = '';
         } else {
-            // @codeCoverageIgnoreStart
             $start = "\n\t";
             $end = "\n";
-            // @codeCoverageIgnoreEnd
         }
 
         return "{$start}" . $parameters . "{$end}";

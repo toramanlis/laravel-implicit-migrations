@@ -11,7 +11,7 @@ use Toramanlis\ImplicitMigrations\Attributes\Table;
 /**
  * @package Toramanlis\Tests\Data\Models
  *
- * @index('products_name_index', column: ['name'])
+ * @index(['name'], name: 'products_name_index')
  */
 #[Table(charset: 'utf8mb4', collation: 'utf8mb4_unicode_ci')]
 class Product extends Model

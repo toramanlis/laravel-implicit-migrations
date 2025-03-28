@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Integration\Generator;
+namespace Toramanlis\Tests\Integration\Generator;
 
 use Toramanlis\Tests\Integration\BaseTestCase;
 
