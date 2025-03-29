@@ -1,6 +1,6 @@
 {
     "name": "toramanlis/implicit-migrations",
-    "description": "Adds a command to create migrations by Eloquent models",
+    "description": "This package is a tool that creates Laravel migration files by inspecting the application's models.",
     "keywords": [
         "laravel",
         "eloquent",
@@ -43,5 +43,11 @@
         "squizlabs/php_codesniffer": "^3.12"
     },
     "prefer-stable": true,
-    "minimum-stability": "dev"
+    "minimum-stability": "dev",
+    "funding": [
+        {
+            "type": "patreon",
+            "url": "https://www.patreon.com/toramanlis"
+        }
+    ]
 }
