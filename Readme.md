@@ -359,7 +359,7 @@ Specifies the details of a pivot table of a relationship. Even if no `Relationsh
 
 `PivotColumn(?string $name, protected ?string $type = null, ?bool $nullable = null, $default = null, ?int $length = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?int $precision = null, ?int $total = null, ?int $places = null, ?array $allowed = null, ?bool $fixed = null, ?string $subtype = null, ?int $srid = null, ?string $expression = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
 
-Defines a column on a pivot table of a relationship. Even if no `Relationship` implication is present, having this implication lets the generator know it's a relationship method. Since pivot tables typically don't have models of their own, we define any extra columns on the relationship method they are required by.
+Defines a column on a pivot table of a relationship. Just like [`PivotTable`](#pivottable), having this implication lets the generator know it's a relationship method. Since pivot tables typically don't have models of their own, we define any extra columns on the relationship method they are required by.
 
 
 ## `Off`
