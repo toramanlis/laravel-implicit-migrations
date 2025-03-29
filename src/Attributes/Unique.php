@@ -13,11 +13,11 @@ class Unique extends Index
     protected IndexType $type;
 
     public function __construct(
-        protected ?string $name = null,
         null|array|string $column = null,
+        protected ?string $name = null,
         protected ?string $algorithm = null,
         protected ?string $language = null
     ) {
-        parent::__construct($name, 'unique', $column, $algorithm, $language);
+        parent::__construct($column, 'unique', $name, $algorithm, $language);
     }
 }

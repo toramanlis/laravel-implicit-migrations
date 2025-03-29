@@ -3,6 +3,7 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
 use Illuminate\Database\Schema\ColumnDefinition;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
 
 class BlueprintDiff
@@ -33,7 +34,8 @@ class BlueprintDiff
 
     protected function applyColumnIndexes(bool $reverse = false)
     {
-        $blueprint = new SimplifyingBlueprint($this->to->getTable());
+        /** @var SimplifyingBlueprint */
+        $blueprint = App::make(SimplifyingBlueprint::class, ['tableName' => $this->to->getTable()]);
 
         foreach ($this->getAddedColumns($reverse) as $column) {
             $blueprint->addColumn($column->type, $column->name, $column->getAttributes());

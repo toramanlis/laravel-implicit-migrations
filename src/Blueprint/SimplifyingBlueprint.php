@@ -4,6 +4,7 @@ namespace Toramanlis\ImplicitMigrations\Blueprint;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
 
@@ -108,7 +109,7 @@ class SimplifyingBlueprint extends Blueprint
 
         $this->columns = $remainingColumns;
 
-        return new Fluent();
+        return App::make(Fluent::class);
     }
 
     public function renameColumn($from, $to)

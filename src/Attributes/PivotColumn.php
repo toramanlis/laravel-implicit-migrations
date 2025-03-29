@@ -10,7 +10,7 @@ class PivotColumn extends Column
 {
     public function __construct(?string $name, ...$attributes)
     {
-        $this->name = $name;
+        $attributes['name'] = $name;
         parent::__construct(...$attributes);
     }
 
@@ -21,6 +21,6 @@ class PivotColumn extends Column
 
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void
     {
-        return; // @codeCoverageIgnore
+        return;
     }
 }

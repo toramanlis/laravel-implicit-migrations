@@ -9,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use ReflectionProperty;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
 class ForeignKey extends MigrationAttribute
@@ -95,7 +96,7 @@ class ForeignKey extends MigrationAttribute
             }
         }
 
-        return ''; // @codeCoverageIgnore
+        throw new ImplicationException(ImplicationException::CODE_FK_NO_MODEL, [$this->columns[0]]);
     }
 
     protected function ensureColumn($columnName, Blueprint $table, array $blueprints, array $modelNames): void
@@ -108,9 +109,14 @@ class ForeignKey extends MigrationAttribute
 
         try {
             $parameters = [];
+            $referencedTableName = $this->getReferenceTableName();
+
+            if (!isset($blueprints[$referencedTableName])) {
+                throw new ImplicationException();
+            }
 
             /** @var Blueprint */
-            $referencedTable = $blueprints[$this->getReferenceTableName()];
+            $referencedTable = $blueprints[$referencedTableName];
             try {
                 foreach ($referencedTable->getColumns() as $column) {
                     if ($column->name !== $this->references[0]) {
@@ -130,8 +136,8 @@ class ForeignKey extends MigrationAttribute
                     return;
                 }
 
-                throw new Exception();
-            } catch (Exception $e) {
+                throw new ImplicationException();
+            } catch (ImplicationException $e) {
                 $propertyReflection = new ReflectionProperty(
                     $this->getReferencedModelName($modelNames),
                     $this->references[0]
@@ -145,8 +151,14 @@ class ForeignKey extends MigrationAttribute
                 $referencedTable->$type($this->references[0]);
                 return;
             }
-        } catch (Exception $e) {
+        } catch (ImplicationException $e) {
             $table->unsignedBigInteger($columnName);
+        } catch (Exception $e) {
+            throw new ImplicationException(
+                ImplicationException::CODE_FK_NO_COL,
+                [$this->columns[0], $table->getTable()],
+                $e
+            );
         }
     }
 

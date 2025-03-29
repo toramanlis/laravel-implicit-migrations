@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
@@ -20,7 +21,9 @@ use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Attributes\MigrationAttribute;
 use Toramanlis\ImplicitMigrations\Attributes\Off;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
+use Toramanlis\ImplicitMigrations\Attributes\PivotTable;
 use Toramanlis\ImplicitMigrations\Attributes\Relationship;
+use Toramanlis\ImplicitMigrations\Attributes\Table;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\Relationship as RelationshipsRelationship;
@@ -41,7 +44,9 @@ class Manager
 
     public static function makeBlueprint(string $tableName, $prefix = ''): SimplifyingBlueprint
     {
-        return new SimplifyingBlueprint($prefix . $tableName);
+        /** @var SimplifyingBlueprint */
+        $blueprint = App::make(SimplifyingBlueprint::class, ['tableName' => $prefix . $tableName]);
+        return $blueprint;
     }
 
     /** @return array<SimplifyingBlueprint>  */
@@ -56,7 +61,7 @@ class Manager
         return $this->relationshipMap;
     }
 
-    protected static function getImplications(
+    public static function getImplications(
         ReflectionClass|ReflectionMethod|ReflectionProperty $reflection,
         string $implicationType = MigrationAttribute::class
     ): array {
@@ -64,20 +69,20 @@ class Manager
         $attributes = array_map(fn (ReflectionAttribute $item) => $item->newInstance(), $attributeReflections);
 
         foreach (explode("\n", $reflection->getDocComment()) as $docLine) {
-            if (!preg_match('/^\s*\*\s*@([a-z]+)\((.*)\)/i', $docLine, $matches)) {
+            if (!preg_match('/^\s*\/?\*\*?\s*@([a-z]+)(?=\((.*)\))?/i', $docLine, $matches)) {
                 continue;
             }
 
             $className = '\\Toramanlis\\ImplicitMigrations\\Attributes\\' . Str::ucfirst($matches[1]);
 
-            if (!class_exists($className)) {
-                continue; // @codeCoverageIgnore
+            if (!class_exists($className) || !is_a($className, $implicationType, true)) {
+                continue;
             }
 
             $parameters = [];
             $positionalAllowed = true;
 
-            foreach (explode(',', $matches[2]) as $segment) {
+            foreach (explode(',', $matches[2] ?? '') as $segment) {
                 $segment = trim($segment);
 
                 if (preg_match('/([a-z0-9]+)\s*:\s*(.*)/i', $segment, $submatches)) {
@@ -115,7 +120,8 @@ class Manager
                 0 === count($implications)
                 && !static::isPropertyOff($modelName, $propertyReflection->getName())
             ) {
-                $attribute = new Column();
+                $attribute = App::make(Column::class);
+                $attribute->setInferred();
                 $attribute->inferFromReflectionProperty($propertyReflection);
                 $attribute->inferFromExistingData();
                 $attributes[] = $attribute;
@@ -141,7 +147,7 @@ class Manager
         $blueprints = [];
         foreach ($migrations as $migration) {
             $blueprints[$migration->getSource()] = $blueprints[$migration->getSource()]
-                ?? new SimplifyingBlueprint($migration::TABLE_NAME);
+                ?? App::make(SimplifyingBlueprint::class, ['tableName' => $migration::TABLE_NAME]);
 
             $blueprint = $blueprints[$migration->getSource()];
             $migration->tableUp($blueprint);
@@ -172,11 +178,12 @@ class Manager
             }
 
             if (
-                !count(static::getImplications($methodReflection, Relationship::class))
-                && (
-                    static::isMethodOff($modelName, $methodReflection->getShortName())
-                    || !$methodReflection->hasReturnType()
-                    || !is_a((string) $methodReflection->getReturnType(), Relation::class, true)
+                !count(static::getImplications($methodReflection, Relationship::class)) &&
+                !count(static::getImplications($methodReflection, PivotColumn::class)) &&
+                (
+                    static::isMethodOff($modelName, $methodReflection->getShortName()) ||
+                    !$methodReflection->hasReturnType() ||
+                    !is_a((string) $methodReflection->getReturnType(), Relation::class, true)
                 )
             ) {
                 continue;
@@ -198,12 +205,15 @@ class Manager
                 continue;
             }
 
+            /** @var IndirectRelationship */
             $relationship = $methodRelationships[0];
 
-            /** @var IndirectRelationship $relationship */
-
             $pivotColumnAttributes = static::getImplications($methodReflection, PivotColumn::class);
+            $pivotTableAttribute = static::getImplications($methodReflection, PivotTable::class)[0] ??
+                new PivotTable();
+
             $relationship->setPivotColumnAttributes($pivotColumnAttributes);
+            $relationship->setPivotTableAttribute($pivotTableAttribute);
         }
 
         return $relationships;
@@ -299,6 +309,8 @@ class Manager
         $pivotBlueprint = $this
             ->getBlueprintByTable($relationship->getPivotTable());
 
+        $relationship->pivotTableAttribute->applyToBlueprint($pivotBlueprint);
+
         [
             $targetBlueprint->getTable() => $targetForeignKey,
             $blueprint->getTable() => $foreignKey
@@ -391,13 +403,12 @@ class Manager
         }
 
         $modelReflection = new ReflectionClass($modelName);
+        $explicitlyOff = false;
 
         if ($modelReflection->hasProperty($propertyName)) {
             $propertyReflection = new ReflectionProperty($modelName, $propertyName);
             $attributes = static::getImplications($propertyReflection, Off::class);
             $explicitlyOff = 0 !== count($attributes);
-        } else {
-            $explicitlyOff = false; // @codeCoverageIgnore
         }
 
         return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
@@ -414,13 +425,12 @@ class Manager
         }
 
         $modelReflection = new ReflectionClass($modelName);
+        $explicitlyOff = false;
 
         if ($modelReflection->hasMethod($methodName)) {
             $methodReflection = new ReflectionMethod($modelName, $methodName);
             $attributes = static::getImplications($methodReflection, Off::class);
             $explicitlyOff = 0 !== count($attributes);
-        } else {
-            $explicitlyOff = false; // @codeCoverageIgnore
         }
 
         return !Config::get('database.auto_infer_migrations') || $explicitlyOff;
@@ -431,7 +441,7 @@ class Manager
         $attributes = static::getMigrationAttributes($modelName);
 
         if (empty($attributes) && static::isModelOff($modelName)) {
-            return null; // @codeCoverageIgnore
+            return null;
         }
 
         /** @var Model */
@@ -439,7 +449,7 @@ class Manager
         $table = static::makeBlueprint($tableAttribute->name ?? $instance->getTable(), $tableAttribute->prefix ?? '');
 
         foreach ($attributes as $attribute) {
-            /** @var AppliesToBlueprint $attribute */
+            /** @var Table|Column|Index|ForeignKey $attribute */
             $attribute->applyToBlueprint($table);
         }
 
@@ -456,7 +466,7 @@ class Manager
             $table = $this->blueprints[(new $modelName())->getTable()] ?? null;
 
             if (!$table) {
-                continue; // @codeCoverageIgnore
+                continue;
             }
 
             $attributes = static::getMigrationAttributes($modelName);
@@ -491,7 +501,7 @@ class Manager
                 $instance->getKeyName() === $command->columns[0] &&
                 $columnExists
             ) {
-                return; // @codeCoverageIgnore
+                return;
             }
 
             break;
@@ -503,7 +513,6 @@ class Manager
                     $table->id($instance->getKeyName());
                     return;
                 } else {
-                    // @codeCoverageIgnoreStart
                     $table->unsignedBigInteger($instance->getKeyName(), $instance->getIncrementing());
                 }
             } else {
@@ -513,11 +522,10 @@ class Manager
                 }
 
                 $table->$method($instance->getKeyName());
-                // @codeCoverageIgnoreEnd
             }
         }
 
-        $table->primary($instance->getKeyName()); // @codeCoverageIgnore
+        $table->primary($instance->getKeyName());
     }
 
     protected static function inferTimestamps(string $modelName, Blueprint $table)
@@ -526,7 +534,7 @@ class Manager
         $instance = new $modelName();
 
         if (!$instance->usesTimestamps()) {
-            return; // @codeCoverageIgnore
+            return;
         }
 
         $createdAtColumn = $instance->getCreatedAtColumn();
@@ -534,11 +542,11 @@ class Manager
 
         foreach ($table->getColumns() as $column) {
             if ($column->name === $createdAtColumn) {
-                $createdAtColumn = null; // @codeCoverageIgnore
+                $createdAtColumn = null;
             }
 
             if ($column->name === $updatedAtColumn) {
-                $updatedAtColumn = null; // @codeCoverageIgnore
+                $updatedAtColumn = null;
             }
         }
 
@@ -564,7 +572,7 @@ class Manager
 
         foreach ($table->getColumns() as $column) {
             if ($column->name === $deletedAtColumn) {
-                return; // @codeCoverageIgnore
+                return;
             }
         }
 
@@ -576,16 +584,19 @@ class Manager
         [$modifiedColumns, $droppedColumns, $addedColumns] = static::getColumnDiffs($from, $to);
         [$droppedIndexes, $renamedIndexes, $addedIndexes] = static::getIndexDiffs($from, $to);
 
-        return new BlueprintDiff(
-            $from,
-            $to,
-            $modifiedColumns,
-            $droppedColumns,
-            $addedColumns,
-            $droppedIndexes,
-            $renamedIndexes,
-            $addedIndexes
-        );
+        /** @var BlueprintDiff */
+        $diff = App::make(BlueprintDiff::class, [
+            'from' => $from,
+            'to' => $to,
+            'modifiedColumns' => $modifiedColumns,
+            'droppedColumns' => $droppedColumns,
+            'addedColumns' => $addedColumns,
+            'droppedIndexes' => $droppedIndexes,
+            'renamedIndexes' => $renamedIndexes,
+            'addedIndexes' => $addedIndexes
+        ]);
+
+        return $diff;
     }
 
     protected static function attributesEqual(Fluent $left, Fluent $right, array $exceptions = [])
@@ -687,10 +698,6 @@ class Manager
                     $renamedIndexes[$fromCommand->index] = $toCommand->index;
                     continue 2;
                 }
-            }
-
-            if (isset($renamedIndexes[$fromCommand->index])) {
-                continue; // @codeCoverageIgnore
             }
 
             $droppedIndexes[] = $fromCommand;

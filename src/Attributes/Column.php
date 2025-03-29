@@ -3,14 +3,16 @@
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
 use Attribute;
+use Exception;
 use Illuminate\Database\Schema\Blueprint;
 use ReflectionProperty;
 use Illuminate\Support\Str;
 use ReflectionNamedType;
 use ReflectionType;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\ColumnExporter;
+use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
-#[Attribute(Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
 class Column extends MigrationAttribute
 {
     public const TYPE_MAP = [
@@ -47,10 +49,11 @@ class Column extends MigrationAttribute
         'computed' => ['expression'],
     ];
 
-    protected ?string $name = null;
+    protected bool $inferred = false;
 
     public function __construct(
         protected ?string $type = null,
+        protected ?string $name = null,
         protected ?bool $nullable = null,
         protected $default = null,
         protected ?int $length = null,
@@ -70,6 +73,11 @@ class Column extends MigrationAttribute
         protected ?string $storedAs = null,
         protected ?string $after = null
     ) {
+    }
+
+    public function setInferred(bool $value = true)
+    {
+        $this->inferred = $value;
     }
 
     public function inferFromReflectionProperty(ReflectionProperty $reflection): void
@@ -104,18 +112,46 @@ class Column extends MigrationAttribute
         }
     }
 
+    protected function validate(Blueprint $table)
+    {
+        if (empty($this->name)) {
+            throw new ImplicationException(ImplicationException::CODE_COL_NO_NAME, [$table->getTable()]);
+        }
+
+        if (null === $this->type) {
+            throw new ImplicationException(ImplicationException::CODE_COL_NO_TYPE, [$table->getTable(), $this->name]);
+        }
+    }
+
     public function applyToBlueprint(Blueprint $table): Blueprint
     {
-        if (null === $this->type) {
-            return $table;
+        try {
+            $this->validate($table);
+        } catch (ImplicationException $e) {
+            if ($this->inferred) {
+                return $table;
+            }
+
+            throw $e;
+        } catch (Exception $e) {
+            $reportedName = $this->name ?? '???';
+            throw new ImplicationException(
+                ImplicationException::CODE_COL_GENERIC,
+                [$table->getTable(), $reportedName],
+                $e
+            );
         }
 
         $attributes = array_filter([
-            'nullable' => $this->nullable,
-            'default' => $this->default,
-            'length' => $this->length,
-            'unsigned' => $this->unsigned,
+            'after' => $this->after,
             'autoIncrement' => $this->autoIncrement,
+            'comment' => $this->comment,
+            'default' => $this->default,
+            'nullable' => $this->nullable,
+            'storedAs' => $this->storedAs,
+            'unsigned' => $this->unsigned,
+            'virtualAs' => $this->virtualAs,
+            'length' => $this->length,
             'precision' => $this->precision,
             'total' => $this->total,
             'places' => $this->places,
@@ -125,21 +161,15 @@ class Column extends MigrationAttribute
             'srid' => $this->srid,
             'expression' => $this->expression,
             'collation' => $this->collation,
-            'comment' => $this->comment,
-            'virtualAs' => $this->virtualAs,
-            'storedAs' => $this->storedAs,
-            'after' => $this->after,
         ], fn ($i) => null !== $i);
 
         $parameters = [];
-        if (isset(static::PARAMETER_MAP[$this->type])) {
-            foreach (static::PARAMETER_MAP[$this->type] as $parameterName) {
-                if (!isset($attributes[$parameterName])) {
-                    continue;
-                }
-
-                $parameters[$parameterName] = $attributes[$parameterName]; // @codeCoverageIgnore
+        foreach (static::PARAMETER_MAP[$this->type] ?? [] as $parameterName) {
+            if (!isset($attributes[$parameterName])) {
+                continue;
             }
+
+            $parameters[$parameterName] = $attributes[$parameterName];
         }
 
         if (
@@ -149,10 +179,8 @@ class Column extends MigrationAttribute
                 array_keys($parameters)
             ))
         ) {
-            // @codeCoverageIgnoreStart
             $table->addColumn($this->type, $this->name, $attributes);
             return $table;
-            // @codeCoverageIgnoreEnd
         }
 
         $column = $table->{$this->type}($this->name, ...$parameters);

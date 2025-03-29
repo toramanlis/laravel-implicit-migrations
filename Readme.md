@@ -21,6 +21,16 @@
     - [`database.auto_infer_migrations`](#databaseauto_infer_migrations)
 - [Manual Migrations](#manual-migrations)
 - [Implication Reference](#implication-reference)
+    - [`Table`](#table)
+    - [`Column`](#column)
+    - [`Index`](#index)
+    - [`Unique`](#unique)
+    - [`Primary`](#primary)
+    - [`Relationship`](#relationship)
+    - [`ForeignKey`](#foreignkey)
+    - [`PivotTable`](#pivottable)
+    - [`PivotColumn`](#pivotcolumn)
+    - [`Off`](#off)
 
 
 # Overview
@@ -254,41 +264,108 @@ This is a `boolean` value that controls, you guessed it, whether or not to infer
 
 It's always a good idea to have a backup plan. You might come accross some more intricate or complicated requirements from a migration. For this reason, this tool doesn't take into account any migrations that does not have a `getSource()` method. This way, you can add your own custom migrations that are processed with Laravel's `migrate` command, but completely invisible to `implicit-migrations:generate`.
 
+If a manual migration happens to have a method named `getSource`, the [Off](#off) implication can be utilized to indicate that it is in fact a manual migration.
+
 
 # Implication Reference
 
-## `Table`
 
-*to be documented*
+All the PHP attributes for the implications reside in the namespace `Toramanlis\ImplicitMigrations\Attributes`. If you choose to utilize them, make sure they're available in your production environment as well. See the [installation section](#installation) for details.
+
+Generally, the parameters of the implications are optional as they often have default values or can possibly be inferred from the rest of the information available in the application such as the native PHP definitions of models, properties and methods or other implications' details.
+
+Best to keep in mind that these details still might not be sufficient to create the migration and some of the *optional* parameters might, in fact, be required.
+
+## `Table`
+##### Target: *`class`*
+
+`Table(?string $name = null, ?string $engine = null, ?string $charset = null, ?string $collation = null)`
+
+Used with classes for specifying the table details. When the `database.auto_infer_migrations` configuration option is set to `true`, using this implication lets the class processed.
+
 
 ## `Column`
 
-*to be documented*
+##### Target: *`class`*, *`property`*
+
+`Column(?string $type = null, ?string $name = null, ?bool $nullable = null, $default = null, ?int $length = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?int $precision = null, ?int $total = null, ?int $places = null, ?array $allowed = null, ?bool $fixed = null, ?string $subtype = null, ?int $srid = null, ?string $expression = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Can be used with both classes and properties to define columns. The `name` parameter is mandatory when used with classes as it won't be able to infer the column name. In contrast, when used with a property, column name defaults to the name of the property. Either by using it on a property or providing a `name` that matches a property allows it to infer whatever information available in the definition of said property.
+
 
 ## `Index`
 
-*to be documented*
+##### Target: *`class`*, *`property`*
+
+`Index(null|array|string $column = null, string $type = 'index', ?string $name = null, ?string $algorithm = null, ?string $language = null)`
+
+Just like `Column`, this can also be used with both classes and properties. The `column` parameter is optional when used with a property and defaults to the column name associated with that property even if the property doesn't have a `Column` implication of its own. When used with a class, the `column` parameter is mandatory.
+
+When `Index` is associated with a single column name by either using it with a property or having given one value to the `column` parameter, it will try and ensure the existence of a column with that name, using any information available in the model definition.
+
 
 ## `Unique`
 
-*to be documented*
+##### Target: *`class`*, *`property`*
+
+`Unique(null|array|string $column = null, ?string $name = null, ?string $algorithm = null, ?string $language = null)`
+
+Alias for `Index($column, type: 'unique', ...$args)`
+
 
 ## `Primary`
 
-*to be documented*
+##### Target: *`class`*, *`property`*
+
+`Primary(null|array|string $column = null, ?string $name = null, ?string $algorithm = null, ?string $language = null)`
+
+Alias for `Index($column, type: 'primary', ...$args)`
+
 
 ## `Relationship`
 
-*to be documented*
+##### Target: *`method`*
+
+`Relationship()`
+
+Specifies that a method is a Laravel relationship. What kind of relationship it is will always be inferred by the return type of the method. This implication is redundant if the `database.auto_infer_migrations` configuration option is on, as the return type of a `public` method is already taken as an implication of whether or not it's a relationship method.
+
+If the type of relationship requires tables and columns that are not defined, `Relationship` will try to ensure them in the migration using whatever information is available.
+
 
 ## `ForeignKey`
 
-*to be documented*
+##### Target: *`class`*, *`property`*
+
+`ForeignKey(string $on, null|array|string $column = null, null|array|string $references = null, ?string $onUpdate = null, ?string $onDelete = null)`
+
+Similar to `Index`, this can be used with both classes and properties, but with classes, it's mandatory to provide the `column` parameter.
+
+The `on` parameter can be a table name or a class name of a model.
+
+
+## `PivotTable`
+
+##### Target: *`method`*
+
+`PivotTable(?string $name = null, ?string $engine = null, ?string $charset = null, ?string $collation = null)`
+
+Specifies the details of a pivot table of a relationship. Even if no `Relationship` implication is present, having this implication lets the generator know it's a relationship method.
+
 
 ## `PivotColumn`
 
-*to be documented*
+##### Target: *`method`*
+
+`PivotColumn(?string $name, protected ?string $type = null, ?bool $nullable = null, $default = null, ?int $length = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?int $precision = null, ?int $total = null, ?int $places = null, ?array $allowed = null, ?bool $fixed = null, ?string $subtype = null, ?int $srid = null, ?string $expression = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Defines a column on a pivot table of a relationship. Just like [`PivotTable`](#pivottable), having this implication lets the generator know it's a relationship method. Since pivot tables typically don't have models of their own, we define any extra columns on the relationship method they are required by.
+
 
 ## `Off`
 
-*to be documented*
+##### Target: *`class`*, *`property`*, *`method`*
+
+`Off()`
+
+Lets the generator know that the given class, property or method should be ignored. This includes `getSource` method a migration. If you have a manually written migration that happens to have a method name `getSource`, you can add this implication to that method to keep the generator off that migration.

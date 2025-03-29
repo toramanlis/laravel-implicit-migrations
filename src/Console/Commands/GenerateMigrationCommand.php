@@ -9,8 +9,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use ReflectionClass;
+use ReflectionMethod;
 use SplFileInfo;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Toramanlis\ImplicitMigrations\Attributes\Off;
+use Toramanlis\ImplicitMigrations\Blueprint\Manager;
 use Toramanlis\ImplicitMigrations\Generator\MigrationGenerator;
 
 #[AsCommand(name: 'implicit-migrations:generate')]
@@ -68,7 +71,7 @@ class GenerateMigrationCommand extends Command
 
         foreach ($modelPaths as $modelPath) {
             if (!$modelPath) {
-                continue; // @codeCoverageIgnore
+                continue;
             }
 
             $modelPath = $modelPath[0] === DIRECTORY_SEPARATOR ? $modelPath : base_path($modelPath);
@@ -86,7 +89,7 @@ class GenerateMigrationCommand extends Command
 
             $modelFile = (new ReflectionClass($className))->getFileName();
             if (!in_array($modelFile, $modelFiles)) {
-                continue; // @codeCoverageIgnore
+                continue;
             }
 
             $modelNames[$modelFile] = $className;
@@ -106,7 +109,11 @@ class GenerateMigrationCommand extends Command
                 $fileName = $migrationFile->getRealPath();
                 $migration = include($fileName);
 
-                if (!$migration instanceof Migration || !method_exists($migration, 'getSource')) {
+                if (
+                    !$migration instanceof Migration ||
+                    !method_exists($migration, 'getSource') ||
+                    count(Manager::getImplications(new ReflectionMethod($migration, 'getSource'), Off::class))
+                ) {
                     continue;
                 }
 

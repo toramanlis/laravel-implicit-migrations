@@ -9,6 +9,7 @@ use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Manager;
 use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\App;
 
 /** @package Toramanlis\ImplicitMigrations\Generator */
 class MigrationGenerator
@@ -29,8 +30,12 @@ class MigrationGenerator
     {
         $this->existingBlueprints = Manager::mergeMigrationsToBlueprints($existingMigrations);
 
-        $this->createTemplateManager = new TemplateManager(static::CREATE_TEMPLATE);
-        $this->updateTemplateManager = new TemplateManager(static::UPDATE_TEMPLATE);
+        /** @var TemplateManager */
+        $manager = App::make(TemplateManager::class, ['templateName' => static::CREATE_TEMPLATE]);
+        $this->createTemplateManager = $manager;
+        /** @var TemplateManager */
+        $manager = App::make(TemplateManager::class, ['templateName' => static::UPDATE_TEMPLATE]);
+        $this->updateTemplateManager = $manager;
     }
 
     /**
@@ -52,14 +57,15 @@ class MigrationGenerator
             $blueprint = Manager::generateBlueprint($modelName);
 
             if (null === $blueprint) {
-                continue; // @codeCoverageIgnore
+                continue;
             }
 
             $blueprints[$blueprint->getTable()] = $blueprint;
             $sourceMap[$blueprint->getTable()] = $modelName;
         }
 
-        $blueprintManager = new Manager($blueprints);
+        /** @var Manager */
+        $blueprintManager = App::make(Manager::class, ['blueprints' => $blueprints]);
         $blueprintManager->applyRelationshipsToBlueprints($relationships);
         $blueprintManager->ensureIndexColumns($modelNames);
 

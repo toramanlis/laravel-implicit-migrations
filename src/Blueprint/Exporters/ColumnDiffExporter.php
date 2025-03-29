@@ -11,8 +11,6 @@ class ColumnDiffExporter extends ColumnExporter
     }
 
     /**
-     * @codeCoverageIgnore
-     *
      * @param string $from
      * @param string $to
      * @return string
