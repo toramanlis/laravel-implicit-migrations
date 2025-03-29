@@ -32,7 +32,7 @@
             <directory suffix=".php">src/templates</directory>
         </exclude>
     </source>
-    <coverage pathCoverage="false" ignoreDeprecatedCodeUnits="true" disableCodeCoverageIgnore="false">
+    <coverage pathCoverage="false" ignoreDeprecatedCodeUnits="true" disableCodeCoverageIgnore="true">
         <report>
             <html outputDirectory=".coverage"/>
         </report>
