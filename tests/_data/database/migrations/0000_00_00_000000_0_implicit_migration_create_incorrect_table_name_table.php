@@ -7,7 +7,7 @@ use Toramanlis\Tests\Data\Models\Permission as Source;
 
 return new class extends Migration
 {
-    public const TABLE_NAME = 'permission_role';
+    public const TABLE_NAME = 'incorrect_table_name';
 
     public function getSource(): string
     {
@@ -20,8 +20,10 @@ return new class extends Migration
         $table->unsignedBigInteger('permission_id');
         $table->boolean('is_temporary');
 
-        $table->foreign('role_id', 'permission_role_role_id_foreign')->on('roles')->references('id');
-        $table->foreign('permission_id', 'permission_role_permission_id_foreign')->on('permissions')->references('id');
+        $table->foreign('role_id', 'incorrect_table_name_role_id_foreign')->on('roles')->references('id');
+        $table->foreign('permission_id', 'incorrect_table_name_permission_id_foreign')->on('permissions')->references('id');
+
+        $table->charset('idk');
     }
 
     public function up(): void

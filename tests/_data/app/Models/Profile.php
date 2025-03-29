@@ -9,7 +9,9 @@ use Toramanlis\ImplicitMigrations\Attributes\Table;
 #[Table]
 class Profile extends Model
 {
-    #[Relationship]
+    /**
+     * @relationship
+    */
     public function store()
     {
         return $this->hasOneThrough(Store::class, User::class);

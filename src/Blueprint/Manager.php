@@ -21,6 +21,7 @@ use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Attributes\MigrationAttribute;
 use Toramanlis\ImplicitMigrations\Attributes\Off;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
+use Toramanlis\ImplicitMigrations\Attributes\PivotTable;
 use Toramanlis\ImplicitMigrations\Attributes\Relationship;
 use Toramanlis\ImplicitMigrations\Attributes\Table;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
@@ -60,7 +61,7 @@ class Manager
         return $this->relationshipMap;
     }
 
-    protected static function getImplications(
+    public static function getImplications(
         ReflectionClass|ReflectionMethod|ReflectionProperty $reflection,
         string $implicationType = MigrationAttribute::class
     ): array {
@@ -68,7 +69,7 @@ class Manager
         $attributes = array_map(fn (ReflectionAttribute $item) => $item->newInstance(), $attributeReflections);
 
         foreach (explode("\n", $reflection->getDocComment()) as $docLine) {
-            if (!preg_match('/^\s*\*\s*@([a-z]+)(?=\((.*)\))?/i', $docLine, $matches)) {
+            if (!preg_match('/^\s*\/?\*\*?\s*@([a-z]+)(?=\((.*)\))?/i', $docLine, $matches)) {
                 continue;
             }
 
@@ -177,11 +178,12 @@ class Manager
             }
 
             if (
-                !count(static::getImplications($methodReflection, Relationship::class))
-                && (
-                    static::isMethodOff($modelName, $methodReflection->getShortName())
-                    || !$methodReflection->hasReturnType()
-                    || !is_a((string) $methodReflection->getReturnType(), Relation::class, true)
+                !count(static::getImplications($methodReflection, Relationship::class)) &&
+                !count(static::getImplications($methodReflection, PivotColumn::class)) &&
+                (
+                    static::isMethodOff($modelName, $methodReflection->getShortName()) ||
+                    !$methodReflection->hasReturnType() ||
+                    !is_a((string) $methodReflection->getReturnType(), Relation::class, true)
                 )
             ) {
                 continue;
@@ -203,12 +205,15 @@ class Manager
                 continue;
             }
 
+            /** @var IndirectRelationship */
             $relationship = $methodRelationships[0];
 
-            /** @var IndirectRelationship $relationship */
-
             $pivotColumnAttributes = static::getImplications($methodReflection, PivotColumn::class);
+            $pivotTableAttribute = static::getImplications($methodReflection, PivotTable::class)[0] ??
+                new PivotTable();
+
             $relationship->setPivotColumnAttributes($pivotColumnAttributes);
+            $relationship->setPivotTableAttribute($pivotTableAttribute);
         }
 
         return $relationships;
@@ -303,6 +308,8 @@ class Manager
             ->getBlueprintByTable($relationship->getRelatedTables()[1]);
         $pivotBlueprint = $this
             ->getBlueprintByTable($relationship->getPivotTable());
+
+        $relationship->pivotTableAttribute->applyToBlueprint($pivotBlueprint);
 
         [
             $targetBlueprint->getTable() => $targetForeignKey,

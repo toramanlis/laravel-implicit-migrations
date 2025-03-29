@@ -9,8 +9,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use ReflectionClass;
+use ReflectionMethod;
 use SplFileInfo;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Toramanlis\ImplicitMigrations\Attributes\Off;
+use Toramanlis\ImplicitMigrations\Blueprint\Manager;
 use Toramanlis\ImplicitMigrations\Generator\MigrationGenerator;
 
 #[AsCommand(name: 'implicit-migrations:generate')]
@@ -106,7 +109,11 @@ class GenerateMigrationCommand extends Command
                 $fileName = $migrationFile->getRealPath();
                 $migration = include($fileName);
 
-                if (!$migration instanceof Migration || !method_exists($migration, 'getSource')) {
+                if (
+                    !$migration instanceof Migration ||
+                    !method_exists($migration, 'getSource') ||
+                    count(Manager::getImplications(new ReflectionMethod($migration, 'getSource'), Off::class))
+                ) {
                     continue;
                 }
 

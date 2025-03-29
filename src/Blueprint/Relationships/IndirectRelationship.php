@@ -4,11 +4,14 @@ namespace Toramanlis\ImplicitMigrations\Blueprint\Relationships;
 
 use Exception;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
+use Toramanlis\ImplicitMigrations\Attributes\PivotTable;
 use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 /** @package Toramanlis\ImplicitMigrations\Blueprint\Relationships */
 class IndirectRelationship extends Relationship
 {
+    public readonly PivotTable $pivotTableAttribute;
+
     /** @var array<PivotColumn> */
     public readonly array $pivotColumnAttributes;
 
@@ -126,6 +129,13 @@ class IndirectRelationship extends Relationship
     {
         $this->pivotColumns[] = $pivotColumn;
         return $this;
+    }
+
+    public function setPivotTableAttribute(PivotTable $attribute)
+    {
+        $this->pivotTableAttribute = $attribute;
+        $attribute->name ??= $this->pivotTable;
+        $this->pivotTable = $attribute->name;
     }
 
     /**

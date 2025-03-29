@@ -18,7 +18,7 @@ class RelationshipResolverTest extends BaseTestCase
         $this->carryModels(['User.php', 'Role.php', 'Permission.php']);
         $this->generate();
         $this->expectMigration('create_permissions_table');
-        $this->expectMigration('create_permission_role_table');
+        $this->expectMigration('create_incorrect_table_name_table');
     }
 
     public function testHasOne()

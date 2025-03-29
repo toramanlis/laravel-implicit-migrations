@@ -74,7 +74,10 @@ class MigrationGeneratorTest extends BaseTestCase
     public function testRenameTable()
     {
         $this->carryModels(['Item.php']);
-        $this->carryMigrations(['0000_00_00_000000_0_implicit_migration_create_items_table.php']);
+        $this->carryMigrations([
+            '0000_00_00_000000_0_implicit_migration_create_items_table.php',
+            '0000_00_00_000000_0_migration_update_items_table.php'
+        ]);
 
         $this->generate();
         $this->expectMigration('update_items_table', '0000_00_00_000000_0_implicit_migration_update_items_table.php');
