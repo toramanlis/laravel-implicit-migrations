@@ -37,7 +37,7 @@
 
 ## What It Is
 
-This package is a tool that creates Laravel migration files by inspecting the application's models by the command `php artisan implicit-migrations:generate`. Even after you change the model classes, you can run the command to generate a migration with the necessary update operations.
+This package is a tool that creates Laravel migration files by inspecting the application's models with the command `php artisan implicit-migrations:generate`. Even after you change the model classes, you can run the command to generate a migration with the necessary update operations.
 
 ## How It Works
 
