@@ -18,6 +18,10 @@ abstract class BaseTestCase extends TestCase
             ->atLeast()
             ->times(0)
             ->andReturn($this->mock(Grammar::class))
+            ->getMock()
+            ->expects('useDefaultSchemaGrammar')
+            ->atLeast()
+            ->times(0)
             ->getMock();
         DB::shouldReceive('connection')->atLeast()->times(0)->andReturn($connection);
     }
