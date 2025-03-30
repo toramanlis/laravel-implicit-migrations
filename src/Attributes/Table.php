@@ -10,6 +10,8 @@ use ReflectionClass;
 #[Attribute(Attribute::TARGET_CLASS)]
 class Table extends MigrationAttribute
 {
+    use Applicable;
+
     public string $prefix = '';
 
     public function __construct(
@@ -33,7 +35,7 @@ class Table extends MigrationAttribute
         $this->name = $model->getTable();
     }
 
-    public function applyToBlueprint(Blueprint $table): Blueprint
+    protected function process(Blueprint $table): Blueprint
     {
         $table->engine($this->engine);
         $table->charset($this->charset);

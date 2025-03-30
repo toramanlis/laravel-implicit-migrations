@@ -15,7 +15,7 @@ use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\MorphicDirectRelationship;
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\MorphicIndirectRelationship;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 
 class RelationshipResolver
 {
@@ -30,7 +30,7 @@ class RelationshipResolver
         } elseif ($relation instanceof BelongsToMany) {
             return [static::resolveBelongsToMany($relation)];
         } else {
-            throw new ImplicationException(ImplicationException::CODE_RL_UNKNOWN, [$relation::class]);
+            throw new Exception(Exception::CODE_RL_UNKNOWN, [$relation::class]);
         }
     }
 

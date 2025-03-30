@@ -2,10 +2,9 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Relationships;
 
-use Exception;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
 use Toramanlis\ImplicitMigrations\Attributes\PivotTable;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 
 /** @package Toramanlis\ImplicitMigrations\Blueprint\Relationships */
 class IndirectRelationship extends Relationship
@@ -155,7 +154,7 @@ class IndirectRelationship extends Relationship
     public function getPivotTable(): string
     {
         if (null === $this->pivotTable) {
-            throw new ImplicationException(ImplicationException::CODE_RL_NO_PIVOT);
+            throw new Exception(Exception::CODE_RL_NO_PIVOT);
         }
 
         return $this->pivotTable;

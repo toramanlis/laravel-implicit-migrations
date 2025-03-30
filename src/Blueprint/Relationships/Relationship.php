@@ -2,8 +2,6 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Relationships;
 
-use Exception;
-
 abstract class Relationship
 {
     protected string $source ;

@@ -3,18 +3,18 @@
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
 use Attribute;
-use Exception;
+use Exception as BaseException;
 use Illuminate\Database\Schema\Blueprint;
 use ReflectionProperty;
 use Illuminate\Support\Str;
 use ReflectionNamedType;
 use ReflectionType;
-use Toramanlis\ImplicitMigrations\Blueprint\Exporters\ColumnExporter;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
 class Column extends MigrationAttribute
 {
+    use Applicable;
+
     public const TYPE_MAP = [
         'array' => 'json',
         'bool' => 'boolean',
@@ -48,6 +48,48 @@ class Column extends MigrationAttribute
         'geography' => ['subtype', 'srid'],
         'computed' => ['expression'],
     ];
+
+    public const SUPPORTED_MODIFIERS = [
+        'after',
+        'autoIncrement',
+        'charset',
+        'collation',
+        'comment',
+        'default',
+        'first',
+        'from',
+        'invisible',
+        'nullable',
+        'storedAs',
+        'unsigned',
+        'useCurrent',
+        'useCurrentOnUpdate',
+        'virtualAs',
+        'generatedAs',
+        'always',
+    ];
+
+    public const SUPPORTED_ATTRIBUTES = [
+        'after',
+        'autoIncrement',
+        'comment',
+        'default',
+        'nullable',
+        'storedAs',
+        'unsigned',
+        'virtualAs',
+        'length',
+        'precision',
+        'total',
+        'places',
+        'allowed',
+        'fixed',
+        'subtype',
+        'srid',
+        'expression',
+        'collation',
+    ];
+
 
     protected bool $inferred = false;
 
@@ -115,53 +157,42 @@ class Column extends MigrationAttribute
     protected function validate(Blueprint $table)
     {
         if (empty($this->name)) {
-            throw new ImplicationException(ImplicationException::CODE_COL_NO_NAME, [$table->getTable()]);
+            throw new Exception(Exception::CODE_COL_NO_NAME, [$table->getTable()]);
         }
 
         if (null === $this->type) {
-            throw new ImplicationException(ImplicationException::CODE_COL_NO_TYPE, [$table->getTable(), $this->name]);
+            throw new Exception(Exception::CODE_COL_NO_TYPE, [$table->getTable(), $this->name]);
         }
     }
 
-    public function applyToBlueprint(Blueprint $table): Blueprint
+    protected function process(Blueprint $table): Blueprint
     {
         try {
             $this->validate($table);
-        } catch (ImplicationException $e) {
+        } catch (Exception $e) {
             if ($this->inferred) {
                 return $table;
             }
 
             throw $e;
-        } catch (Exception $e) {
+        } catch (BaseException $e) {
             $reportedName = $this->name ?? '???';
-            throw new ImplicationException(
-                ImplicationException::CODE_COL_GENERIC,
+            throw new Exception(
+                Exception::CODE_COL_GENERIC,
                 [$table->getTable(), $reportedName],
                 $e
             );
         }
 
-        $attributes = array_filter([
-            'after' => $this->after,
-            'autoIncrement' => $this->autoIncrement,
-            'comment' => $this->comment,
-            'default' => $this->default,
-            'nullable' => $this->nullable,
-            'storedAs' => $this->storedAs,
-            'unsigned' => $this->unsigned,
-            'virtualAs' => $this->virtualAs,
-            'length' => $this->length,
-            'precision' => $this->precision,
-            'total' => $this->total,
-            'places' => $this->places,
-            'allowed' => $this->allowed,
-            'fixed' => $this->fixed,
-            'subtype' => $this->subtype,
-            'srid' => $this->srid,
-            'expression' => $this->expression,
-            'collation' => $this->collation,
-        ], fn ($i) => null !== $i);
+        $attributes = [];
+
+        foreach (static::SUPPORTED_ATTRIBUTES as $attributeName) {
+            if (null === $this->{$attributeName}) {
+                continue;
+            }
+
+            $attributes[$attributeName] = $this->{$attributeName};
+        }
 
         $parameters = [];
         foreach (static::PARAMETER_MAP[$this->type] ?? [] as $parameterName) {
@@ -175,7 +206,7 @@ class Column extends MigrationAttribute
         if (
             !empty(array_diff(
                 array_keys($attributes),
-                ColumnExporter::SUPPORTED_MODIFIERS,
+                static::SUPPORTED_MODIFIERS,
                 array_keys($parameters)
             ))
         ) {
@@ -185,7 +216,7 @@ class Column extends MigrationAttribute
 
         $column = $table->{$this->type}($this->name, ...$parameters);
 
-        foreach (ColumnExporter::SUPPORTED_MODIFIERS as $modifier) {
+        foreach (static::SUPPORTED_MODIFIERS as $modifier) {
             if (!isset($attributes[$modifier])) {
                 continue;
             }

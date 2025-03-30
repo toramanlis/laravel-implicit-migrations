@@ -5,7 +5,6 @@ namespace Toramanlis\Tests;
 use Closure;
 use Exception;
 use Illuminate\Foundation\Application;
-use Illuminate\Support\Facades\App;
 use Orchestra\Testbench\TestCase;
 
 use function Orchestra\Testbench\package_path;

@@ -3,7 +3,7 @@
 namespace Toramanlis\Tests\Unit\Blueprint\Relationships;
 
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\IndirectRelationship;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 use Toramanlis\Tests\Unit\BaseTestCase;
 
 class IndirectRelationshipTest extends BaseTestCase
@@ -29,8 +29,8 @@ class IndirectRelationshipTest extends BaseTestCase
         $instance->addPivotColumn($pivotColumn);
         $this->assertEquals([$pivotColumn], $instance->getPivotColumns());
 
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_RL_NO_PIVOT);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_RL_NO_PIVOT);
 
         $instance->getPivotTable();
     }

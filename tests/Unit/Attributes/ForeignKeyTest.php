@@ -2,11 +2,10 @@
 
 namespace Toramanlis\Tests\Unit\Attributes;
 
-use Exception;
-use Mockery\MockInterface;
+use Exception as BaseException;
 use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
 use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 use Toramanlis\Tests\Unit\BaseTestCase;
 
 class ForeignKeyTest extends BaseTestCase
@@ -34,10 +33,10 @@ class ForeignKeyTest extends BaseTestCase
         $table = $this->make(SimplifyingBlueprint::class, ['tableName' => 'things']);
 
         $referenceTable = $this->mock(SimplifyingBlueprint::class)
-            ->expects('getColumns')->andThrow(Exception::class)->getMock();
+            ->expects('getColumns')->andThrow(BaseException::class)->getMock();
 
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_FK_NO_COL);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_FK_NO_COL);
 
         $foreignKey->ensureColumns($table, ['others' => $referenceTable], []);
     }

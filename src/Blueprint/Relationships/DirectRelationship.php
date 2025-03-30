@@ -2,7 +2,7 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Relationships;
 
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 
 /** @package Toramanlis\ImplicitMigrations\Blueprint\Relationships */
 class DirectRelationship extends Relationship
@@ -50,7 +50,7 @@ class DirectRelationship extends Relationship
     public function getParentTable(): string
     {
         if (null === $this->parentTable) {
-            throw new ImplicationException(ImplicationException::CODE_RL_NO_PARENT);
+            throw new Exception(Exception::CODE_RL_NO_PARENT);
         }
 
         return $this->parentTable;
@@ -59,7 +59,7 @@ class DirectRelationship extends Relationship
     public function getRelatedTable(): string
     {
         if (null === $this->relatedTable) {
-            throw new ImplicationException(ImplicationException::CODE_RL_NO_RELATED);
+            throw new Exception(Exception::CODE_RL_NO_RELATED);
         }
 
         return $this->relatedTable;
@@ -68,7 +68,7 @@ class DirectRelationship extends Relationship
     public function getForeignKey(): string
     {
         if (null === $this->foreignKey) {
-            throw new ImplicationException(ImplicationException::CODE_RL_NO_FOREIGN);
+            throw new Exception(Exception::CODE_RL_NO_FOREIGN);
         }
 
         return $this->foreignKey;
@@ -77,7 +77,7 @@ class DirectRelationship extends Relationship
     public function getLocalKey(): string
     {
         if (null === $this->localKey) {
-            throw new ImplicationException(ImplicationException::CODE_RL_NO_LOCAL);
+            throw new Exception(Exception::CODE_RL_NO_LOCAL);
         }
 
         return $this->localKey;

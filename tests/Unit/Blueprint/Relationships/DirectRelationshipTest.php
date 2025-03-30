@@ -3,7 +3,7 @@
 namespace Toramanlis\Tests\Unit\Blueprint\Relationships;
 
 use Toramanlis\ImplicitMigrations\Blueprint\Relationships\DirectRelationship;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 use Toramanlis\Tests\Unit\BaseTestCase;
 
 class DirectRelationshipTest extends BaseTestCase
@@ -21,29 +21,29 @@ class DirectRelationshipTest extends BaseTestCase
 
     public function testGetParentTable()
     {
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_RL_NO_PARENT);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_RL_NO_PARENT);
         $this->instance->getParentTable();
     }
 
     public function testGetRelatedTable()
     {
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_RL_NO_RELATED);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_RL_NO_RELATED);
         $this->instance->getRelatedTable();
     }
 
     public function testGetForeignKey()
     {
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_RL_NO_FOREIGN);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_RL_NO_FOREIGN);
         $this->instance->getForeignKey();
     }
 
     public function testGetLocalKey()
     {
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_RL_NO_LOCAL);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_RL_NO_LOCAL);
         $this->instance->getLocalKey();
     }
 }
