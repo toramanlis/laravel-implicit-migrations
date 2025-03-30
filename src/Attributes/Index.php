@@ -7,13 +7,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\IndexDefinition;
 use ReflectionProperty;
 use Illuminate\Support\Str;
-use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 use ValueError;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
 class Index extends MigrationAttribute
 {
+    use Applicable;
+
+
     protected ?array $columns;
 
     protected IndexType $type;
@@ -28,7 +29,7 @@ class Index extends MigrationAttribute
         try {
             $this->type = IndexType::from(strtolower($type));
         } catch (ValueError $e) {
-            throw new ImplicationException(ImplicationException::CODE_IDX_NO_TYPE, [$type], $e);
+            throw new Exception(Exception::CODE_IDX_NO_TYPE, [$type], $e);
         }
 
         $this->columns = is_string($column) ? [$column] : $column;
@@ -69,14 +70,14 @@ class Index extends MigrationAttribute
     protected function validate(Blueprint $table)
     {
         if (empty($this->columns)) {
-            throw new ImplicationException(
-                ImplicationException::CODE_IDX_NO_COL,
+            throw new Exception(
+                Exception::CODE_IDX_NO_COL,
                 [$table->getTable(), $this->type->name]
             );
         }
     }
 
-    public function applyToBlueprint(Blueprint $table): Blueprint
+    protected function process(Blueprint $table): Blueprint
     {
         $this->validate($table);
 

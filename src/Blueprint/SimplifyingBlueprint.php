@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
+use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
 class SimplifyingBlueprint extends Blueprint
 {

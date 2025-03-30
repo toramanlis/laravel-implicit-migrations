@@ -3,9 +3,8 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\Exporter;
-use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
+use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 
 class TableExporter extends Exporter

@@ -1,6 +1,6 @@
 <?php
 
-namespace Toramanlis\ImplicitMigrations\Blueprint;
+namespace Toramanlis\ImplicitMigrations\Attributes;
 
 enum IndexType: string
 {

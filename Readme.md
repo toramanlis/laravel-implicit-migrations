@@ -19,6 +19,7 @@
 - [Configuration](#configuration)
     - [`database.model_paths`](#databasemodel_paths)
     - [`database.auto_infer_migrations`](#databaseauto_infer_migrations)
+    - [`database.implications.<implication_name_in_snake>`](#databaseimplicationsimplication_name_in_snake)
 - [Manual Migrations](#manual-migrations)
 - [Implication Reference](#implication-reference)
     - [`Table`](#table)
@@ -249,8 +250,6 @@ Alternatively, you can always install the package with `composer install toraman
 
 # Configuration
 
-There's very little configuration required for using this tool.
-
 ## `database.model_paths`
 
 An `array` of paths relative to the project directory where application models reside. The default is a single path the same as Laravel' default model path: `['app/Models']`
@@ -258,6 +257,10 @@ An `array` of paths relative to the project directory where application models r
 ## `database.auto_infer_migrations`
 
 This is a `boolean` value that controls, you guessed it, whether or not to infer the migration information automatically. What this means is basically, unless specified otherwise with an implication, none of the models, properties or methods are going to be inspected for migration information. If a property or method of a model has an implication, that model will also be inspected. The default is `true`.
+
+## `database.implications.<implication_name_in_snake>`
+
+These are `boolean` values that can be used to enable or disable implications. The implication names have to be in snake case as per Laravel's convention of configuration keys e.g. `database.implications.foreign_key`. This set to `true` by default for all the implications.
 
 
 # Manual Migrations

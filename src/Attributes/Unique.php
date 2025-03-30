@@ -3,7 +3,6 @@
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
 use Attribute;
-use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
 class Unique extends Index

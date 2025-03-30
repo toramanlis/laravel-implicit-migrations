@@ -3,17 +3,18 @@
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
 use Attribute;
-use Exception;
+use Exception as BaseException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use ReflectionProperty;
 use Illuminate\Support\Str;
 use ReflectionClass;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
 class ForeignKey extends MigrationAttribute
 {
+    use Applicable;
+
     protected string|Model $on;
     protected ?array $columns;
 
@@ -96,7 +97,7 @@ class ForeignKey extends MigrationAttribute
             }
         }
 
-        throw new ImplicationException(ImplicationException::CODE_FK_NO_MODEL, [$this->columns[0]]);
+        throw new Exception(Exception::CODE_FK_NO_MODEL, [$this->columns[0]]);
     }
 
     protected function ensureColumn($columnName, Blueprint $table, array $blueprints, array $modelNames): void
@@ -112,7 +113,7 @@ class ForeignKey extends MigrationAttribute
             $referencedTableName = $this->getReferenceTableName();
 
             if (!isset($blueprints[$referencedTableName])) {
-                throw new ImplicationException();
+                throw new Exception();
             }
 
             /** @var Blueprint */
@@ -136,8 +137,8 @@ class ForeignKey extends MigrationAttribute
                     return;
                 }
 
-                throw new ImplicationException();
-            } catch (ImplicationException $e) {
+                throw new Exception();
+            } catch (Exception $e) {
                 $propertyReflection = new ReflectionProperty(
                     $this->getReferencedModelName($modelNames),
                     $this->references[0]
@@ -151,11 +152,11 @@ class ForeignKey extends MigrationAttribute
                 $referencedTable->$type($this->references[0]);
                 return;
             }
-        } catch (ImplicationException $e) {
-            $table->unsignedBigInteger($columnName);
         } catch (Exception $e) {
-            throw new ImplicationException(
-                ImplicationException::CODE_FK_NO_COL,
+            $table->unsignedBigInteger($columnName);
+        } catch (BaseException $e) {
+            throw new Exception(
+                Exception::CODE_FK_NO_COL,
                 [$this->columns[0], $table->getTable()],
                 $e
             );
@@ -177,7 +178,7 @@ class ForeignKey extends MigrationAttribute
         $this->ensureColumn($columnName, $table, $blueprints, $modelNames);
     }
 
-    public function applyToBlueprint(Blueprint $table): Blueprint
+    protected function process(Blueprint $table): Blueprint
     {
         $references = is_array($this->references) && count($this->references) === 1
             ? $this->references[0]

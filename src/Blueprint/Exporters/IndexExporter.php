@@ -4,7 +4,6 @@ namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
 use Exception;
 use Illuminate\Support\Fluent;
-use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
 
 class IndexExporter extends Exporter
 {

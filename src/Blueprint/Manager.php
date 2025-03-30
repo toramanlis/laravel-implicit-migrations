@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
-use Reflection;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -18,6 +17,7 @@ use ReflectionProperty;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
 use Toramanlis\ImplicitMigrations\Attributes\Index;
+use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 use Toramanlis\ImplicitMigrations\Attributes\MigrationAttribute;
 use Toramanlis\ImplicitMigrations\Attributes\Off;
 use Toramanlis\ImplicitMigrations\Attributes\PivotColumn;
@@ -96,7 +96,7 @@ class Manager
             $attributes[] = new $className(...$parameters);
         }
 
-        return $attributes;
+        return array_filter($attributes, fn (MigrationAttribute $attribute) => $attribute->enabled());
     }
 
     protected static function getMigrationAttributes(string $modelName): array
@@ -309,7 +309,7 @@ class Manager
         $pivotBlueprint = $this
             ->getBlueprintByTable($relationship->getPivotTable());
 
-        $relationship->pivotTableAttribute->applyToBlueprint($pivotBlueprint);
+        $relationship->pivotTableAttribute->apply($pivotBlueprint);
 
         [
             $targetBlueprint->getTable() => $targetForeignKey,
@@ -344,7 +344,7 @@ class Manager
                 }
             }
 
-            $attribute->applyToBlueprint($pivotBlueprint);
+            $attribute->apply($pivotBlueprint);
         }
 
         if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
@@ -450,7 +450,7 @@ class Manager
 
         foreach ($attributes as $attribute) {
             /** @var Table|Column|Index|ForeignKey $attribute */
-            $attribute->applyToBlueprint($table);
+            $attribute->apply($table);
         }
 
         static::inferPrimaryKey($modelName, $table);

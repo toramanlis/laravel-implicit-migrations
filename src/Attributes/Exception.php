@@ -1,11 +1,11 @@
 <?php
 
-namespace Toramanlis\ImplicitMigrations\Exceptions;
+namespace Toramanlis\ImplicitMigrations\Attributes;
 
-use Exception;
+use Exception as BaseException;
 use Throwable;
 
-class ImplicationException extends Exception
+class Exception extends BaseException
 {
     final public const CODE_NONE = 0;
 

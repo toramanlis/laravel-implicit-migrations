@@ -5,6 +5,7 @@ namespace Toramanlis\ImplicitMigrations\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
+use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
 class BlueprintDiff
 {

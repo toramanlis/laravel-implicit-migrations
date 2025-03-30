@@ -21,4 +21,20 @@ abstract class BaseTestCase extends TestCase
             ->getMock();
         DB::shouldReceive('connection')->atLeast()->times(0)->andReturn($connection);
     }
+
+    protected function defineEnvironment($app)
+    {
+        $app['config']->set('database.implications', [
+            'table' => true,
+            'column' => true,
+            'index' => true,
+            'unique' => true,
+            'primary' => true,
+            'foreign_key' => true,
+            'relationship' => true,
+            'pivot_table' => true,
+            'pivot_column' => true,
+            'off' => true,
+        ]);
+    }
 }

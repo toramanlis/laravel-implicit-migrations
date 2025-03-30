@@ -4,8 +4,8 @@ namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Database\Schema\ColumnDefinition;
-use Toramanlis\ImplicitMigrations\Blueprint\IndexType;
-use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
+use Toramanlis\ImplicitMigrations\Attributes\Column;
+use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
 class ColumnExporter extends Exporter
 {
@@ -17,25 +17,7 @@ class ColumnExporter extends Exporter
 
     protected ?string $collapsedType = null;
 
-    public const SUPPORTED_MODIFIERS = [
-        'after',
-        'autoIncrement',
-        'charset',
-        'collation',
-        'comment',
-        'default',
-        'first',
-        'from',
-        'invisible',
-        'nullable',
-        'storedAs',
-        'unsigned',
-        'useCurrent',
-        'useCurrentOnUpdate',
-        'virtualAs',
-        'generatedAs',
-        'always',
-    ];
+    public const SUPPORTED_MODIFIERS = Column::SUPPORTED_MODIFIERS;
 
     public function __construct(protected ColumnDefinition $definition)
     {

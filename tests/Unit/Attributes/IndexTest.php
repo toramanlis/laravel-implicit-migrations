@@ -5,15 +5,15 @@ namespace Toramanlis\Tests\Unit\Attributes;
 use ReflectionProperty;
 use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
-use Toramanlis\ImplicitMigrations\Exceptions\ImplicationException;
+use Toramanlis\ImplicitMigrations\Attributes\Exception;
 use Toramanlis\Tests\Unit\BaseTestCase;
 
 class IndexTest extends BaseTestCase
 {
     public function testInvalidatesInvalidType()
     {
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_IDX_NO_TYPE);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_IDX_NO_TYPE);
 
         $this->make(Index::class, ['name' => 'something', 'type' => 'nothing']);
     }
@@ -23,9 +23,9 @@ class IndexTest extends BaseTestCase
         $index = $this->make(Index::class);
         $table = $this->make(SimplifyingBlueprint::class, ['tableName' => 'things']);
 
-        $this->expectException(ImplicationException::class);
-        $this->expectExceptionCode(ImplicationException::CODE_IDX_NO_COL);
-        $index->applyToBlueprint($table);
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(Exception::CODE_IDX_NO_COL);
+        $index->apply($table);
     }
 
     public function testSkipsInferringFromPropertyWhenColumnsGiven()
