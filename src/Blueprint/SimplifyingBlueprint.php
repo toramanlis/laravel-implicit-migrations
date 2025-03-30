@@ -15,6 +15,7 @@ class SimplifyingBlueprint extends Blueprint
     {
         /** @var Connection */
         $connection = DB::connection();
+        $connection->useDefaultSchemaGrammar();
         parent::__construct($connection, $prefix . $tableName);
     }
 
