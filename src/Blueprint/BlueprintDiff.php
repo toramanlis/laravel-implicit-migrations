@@ -2,12 +2,13 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
+use Exception;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
-class BlueprintDiff
+class BlueprintDiff implements Migratable
 {
     /**
      * @param SimplifyingBlueprint $from
@@ -29,11 +30,9 @@ class BlueprintDiff
         public array $renamedIndexes,
         public array $addedIndexes
     ) {
-        $this->applyColumnIndexes();
-        $this->applyColumnIndexes(true);
     }
 
-    protected function applyColumnIndexes(bool $reverse = false)
+    public function applyColumnIndexes(bool $reverse = false)
     {
         /** @var SimplifyingBlueprint */
         $blueprint = App::make(SimplifyingBlueprint::class, ['tableName' => $this->to->getTable()]);
@@ -161,5 +160,46 @@ class BlueprintDiff
 
         $rename = [$this->from->getTable(), $this->to->getTable()];
         return $reverse ? array_reverse($rename) : $rename;
+    }
+
+    public function getDependedColumnNames(): array
+    {
+        $dependedColumns = [];
+        foreach ($this->addedIndexes as $index) {
+            if (IndexType::Foreign->value !== $index->name) {
+                continue;
+            }
+
+            $references = is_array($index->references) ? $index->references : [$index->references];
+            foreach ($references as $reference) {
+                $dependedColumns[] = "{$index->on}.{$reference}";
+            }
+        }
+
+        return $dependedColumns;
+    }
+
+    public function getAddedColumnNames(): array
+    {
+        return array_map(fn ($column) => $column->name, $this->addedColumns);
+    }
+
+    public function extractForeignKey(string $on, string $reference): Fluent
+    {
+        foreach ($this->addedIndexes as $index) {
+            $references = is_array($index->references) ? $index->references : [$index->references];
+            if (
+                IndexType::Foreign->value !== $index->name ||
+                $index->on !== $on ||
+                !in_array($reference, $index->references)
+            ) {
+                continue;
+            }
+
+            $this->addedIndexes = array_filter($this->addedIndexes, fn($i) => $i->index !== $index->index);
+            return $index;
+        }
+
+        throw new Exception("Reference {$on}.{$reference} has no foreign key in blueprint for {$this->to->getTable()}");
     }
 }

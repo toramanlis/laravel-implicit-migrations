@@ -3,13 +3,14 @@
 namespace Toramanlis\ImplicitMigrations\Generator;
 
 use Illuminate\Database\Schema\Blueprint;
-use Toramanlis\ImplicitMigrations\Blueprint\BlueprintDiff;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableDiffExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Exporters\TableExporter;
 use Toramanlis\ImplicitMigrations\Blueprint\Manager;
 use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\App;
+use Toramanlis\ImplicitMigrations\Blueprint\BlueprintDiff;
+use Toramanlis\ImplicitMigrations\Blueprint\Migratable;
 
 /** @package Toramanlis\ImplicitMigrations\Generator */
 class MigrationGenerator
@@ -73,11 +74,12 @@ class MigrationGenerator
             $sourceMap[$tableName] = $sourceMap[$tableName] ?? $relationship->getSource();
         }
 
+        $migratables = [];
         foreach ($blueprintManager->getBlueprints() as $table => $blueprint) {
             $blueprint->removeDuplicatePrimaries();
             $source = $sourceMap[$table];
             if (!isset($this->existingBlueprints[$source])) {
-                $migrationData[$table] = $this->getMigrationItem($source, $blueprint);
+                $migratables[$table] = $blueprint;
                 continue;
             }
 
@@ -87,22 +89,183 @@ class MigrationGenerator
                 continue;
             }
 
-            $migrationData[$this->existingBlueprints[$source]->getTable()] = $this->getMigrationItem(
-                $source,
-                $diff,
-                MigrationMode::Update
-            );
+            $migratables[$table] = $diff;
+        }
+
+        $migratables = $this->sortMigrations($migratables);
+
+        foreach ($migratables as $table => $migratable) {
+            $source = $sourceMap[$table];
+
+            if ($migratable instanceof SimplifyingBlueprint) {
+                $migrationData[$table] = $this->getMigrationItem($source, $migratable);
+            } else {
+                /** @var BlueprintDiff $migratable */
+                $migratable->applyColumnIndexes();
+                $migratable->applyColumnIndexes(true);
+                $migrationData[$this->existingBlueprints[$source]->getTable()] = $this->getMigrationItem(
+                    $source,
+                    $migratable,
+                );
+            }
         }
 
         return $migrationData;
     }
 
+    /**
+     * @param array<Migratable> $migratables
+     * @return array<Migratable> $migratables
+     */
+    protected function sortMigrations(array $migratables): array
+    {
+        $extraMigratables = $this->separateCodependents($migratables);
+
+        $sorted = [];
+
+        while (count($migratables)) {
+            $dependencyMap = $this->getDependencyMap($migratables);
+
+            foreach (array_keys($migratables) as $table) {
+                $dependencies = $dependencyMap[$table] ?? [];
+
+                $counts = array_map(fn ($item) => count($item), $dependencies);
+                if (0 !== array_sum($counts)) {
+                    continue;
+                }
+
+                $sorted[$table] = $migratables[$table];
+                unset($migratables[$table]);
+            }
+        }
+
+        return array_merge($sorted, $extraMigratables);
+    }
+
+    protected function getDependencyMap($migratables)
+    {
+        $addedColumns = [];
+
+        foreach ($migratables as $table => $migratable) {
+            foreach ($migratable->getAddedColumnNames() as $addedColumn) {
+                $addedColumns["{$table}.{$addedColumn}"] = $table;
+            }
+        }
+
+        $dependencyMap = [];
+        foreach (array_keys($migratables) as $table) {
+            $dependencyMap[$table] = $this->getDependencies($table, $migratables, $addedColumns);
+        }
+
+        return $dependencyMap;
+    }
+
+
+    protected function separateCodependents($migratables): array
+    {
+        $extraMigratables = [];
+
+        while (count($codependents = $this->getCodependents($migratables))) {
+            $biggestDependent = null;
+            $mostDependencies = 0;
+
+            foreach ($codependents as $table => $dependencies) {
+                foreach ($dependencies as $column => $columnDependencies) {
+                    if (count($columnDependencies) <= $mostDependencies) {
+                        continue;
+                    }
+
+                    $mostDependencies = count($columnDependencies);
+                    $biggestDependent = ['table' => $table, 'column' => $column];
+                }
+            }
+
+            [$on, $shortColumn] = explode('.', $biggestDependent['column']);
+            $extraMigratable = App::make(BlueprintDiff::class, [
+                'from' => App::make(SimplifyingBlueprint::class, ['tableName' => $biggestDependent['table']]),
+                'to' => App::make(SimplifyingBlueprint::class, ['tableName' => $biggestDependent['table']]),
+                'modifiedColumns' => [],
+                'droppedColumns' => [],
+                'addedColumns' => [],
+                'droppedIndexes' => [],
+                'renamedIndexes' => [],
+                'addedIndexes' => [],
+                'addedIndexes' => [$migratables[$biggestDependent['table']]->extractForeignKey($on, $shortColumn)],
+            ]);
+            $extraMigratables['_' . $biggestDependent['table']] = $extraMigratable;
+        }
+
+
+        return $extraMigratables;
+    }
+
+    protected function getCodependents($migratables)
+    {
+        $dependencyMap = $this->getDependencyMap($migratables);
+
+        $codependents = [];
+        foreach ($dependencyMap as $table => $dependencies) {
+            foreach ($dependencies as $dependedColumn => $columnDependencies) {
+                foreach ($columnDependencies as $dependency) {
+                    foreach ($dependencyMap[$dependency] as $counterColumn => $subdependencies) {
+                        if (!in_array($table, $subdependencies)) {
+                            continue;
+                        }
+
+                        $codependents[$table] ??= [];
+                        $codependents[$table][$dependedColumn] ??= [];
+                        if (!in_array($dependency, $codependents[$table][$dependedColumn])) {
+                            $codependents[$table][$dependedColumn][] = $dependency;
+                        }
+
+                        $codependents[$dependency] ??= [];
+                        $codependents[$dependency][$counterColumn] ??= [];
+                        if (!in_array($table, $codependents[$dependency][$counterColumn])) {
+                            $codependents[$dependency][$counterColumn][] = $table;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $codependents;
+    }
+
+    protected function getDependencies($table, $migratables, $addedColumns, $chain = []): array
+    {
+        if (in_array($table, $chain)) {
+            return [];
+        }
+
+        $chain = array_merge($chain, [$table]);
+
+        $dependencies = [];
+        $migratable = $migratables[$table];
+        foreach ($migratable->getDependedColumnNames() as $dependedColumn) {
+            if (!isset($addedColumns[$dependedColumn])) {
+                continue;
+            }
+
+            $dependency = $addedColumns[$dependedColumn];
+            $subDependencies = $this->getDependencies($dependency, $migratables, $addedColumns, $chain);
+            $merged = array_unique(array_merge([$dependency], $subDependencies));
+
+            if (1 === count($chain)) {
+                $dependencies[$dependedColumn] = $merged;
+            } else {
+                $dependencies = $merged;
+            }
+        }
+
+        return $dependencies;
+    }
+
     protected function getMigrationItem(
         string $source,
-        Blueprint|BlueprintDiff $definition,
-        MigrationMode $mode = MigrationMode::Create
+        Migratable $definition,
     ) {
         $modelName = explode('::', $source)[0];
+        $mode = $definition instanceof SimplifyingBlueprint ? MigrationMode::Create : MigrationMode::Update;
 
         $exporter = match ($mode) {
             MigrationMode::Create => TableExporter::class,

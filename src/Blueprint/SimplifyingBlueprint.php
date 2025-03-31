@@ -2,6 +2,7 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
+use Exception;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\App;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
-class SimplifyingBlueprint extends Blueprint
+class SimplifyingBlueprint extends Blueprint implements Migratable
 {
     public function __construct($tableName, $prefix = '')
     {
@@ -158,5 +159,47 @@ class SimplifyingBlueprint extends Blueprint
 
         $this->commands = $remainingCommands;
         return $command;
+    }
+
+    public function getDependedColumnNames(): array
+    {
+        $dependedColumnNames = [];
+        foreach ($this->commands as $command) {
+            if (IndexType::Foreign->value !== $command->name) {
+                continue;
+            }
+
+            $references = is_array($command->references) ? $command->references : [$command->references];
+            foreach ($references as $reference) {
+                $dependedColumnNames[] = "{$command->on}.{$reference}";
+            }
+        }
+
+        return $dependedColumnNames;
+    }
+
+    public function getAddedColumnNames(): array
+    {
+        return array_map(fn ($column) => $column->name, $this->columns);
+    }
+
+    public function extractForeignKey(string $on, string $reference): Fluent
+    {
+        foreach ($this->commands as $command) {
+            $references = is_array($command->references) ? $command->references : [$command->references];
+
+            if (
+                IndexType::Foreign->value !== $command->name ||
+                $command->on !== $on ||
+                !in_array($reference, $references)
+            ) {
+                continue;
+            }
+
+            $this->dropForeign($command->index);
+            return $command;
+        }
+
+        throw new Exception("Reference {$on}.{$reference} has no foreign key in blueprint for {$this->getTable()}");
     }
 }
