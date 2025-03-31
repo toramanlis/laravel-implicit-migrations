@@ -95,7 +95,7 @@ class MigrationGenerator
         $migratables = $this->sortMigrations($migratables);
 
         foreach ($migratables as $table => $migratable) {
-            $source = $sourceMap[$table];
+            $source = $sourceMap[ltrim($table, '_')];
 
             if ($migratable instanceof SimplifyingBlueprint) {
                 $migrationData[$table] = $this->getMigrationItem($source, $migratable);
@@ -103,7 +103,9 @@ class MigrationGenerator
                 /** @var BlueprintDiff $migratable */
                 $migratable->applyColumnIndexes();
                 $migratable->applyColumnIndexes(true);
-                $migrationData[$this->existingBlueprints[$source]->getTable()] = $this->getMigrationItem(
+                $key = isset($this->existingBlueprints[$source])
+                    ? $this->existingBlueprints[$source]->getTable() : $table;
+                $migrationData[$key] = $this->getMigrationItem(
                     $source,
                     $migratable,
                 );
