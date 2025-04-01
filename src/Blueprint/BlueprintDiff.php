@@ -42,7 +42,11 @@ class BlueprintDiff implements Migratable
         }
 
         foreach ($this->getAddedIndexes($reverse) as $index) {
-            $blueprint->{$index->name}($index->columns, $index->index, $index->algorithm);
+            $addedIndex = $blueprint->{$index->name}($index->columns, $index->index, $index->algorithm);
+
+            foreach (array_keys($index->getAttributes()) as $attribute) {
+                $addedIndex->{$attribute} = $index->{$attribute};
+            }
         }
 
         foreach ($this->getRenamedIndexes($reverse) as $from => $to) {
@@ -191,7 +195,7 @@ class BlueprintDiff implements Migratable
             if (
                 IndexType::Foreign->value !== $index->name ||
                 $index->on !== $on ||
-                !in_array($reference, $index->references)
+                !in_array($reference, $references)
             ) {
                 continue;
             }
