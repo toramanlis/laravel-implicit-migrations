@@ -1,5 +1,4 @@
 [![codecov](https://codecov.io/gh/toramanlis/laravel-implicit-migrations/graph/badge.svg?token=BH5VBNIWMI)](https://codecov.io/gh/toramanlis/laravel-implicit-migrations)
-[![Known Vulnerabilities](https://snyk.io/test/github/toramanlis/laravel-implicit-migrations/badge.svg)](https://snyk.io/test/github/toramanlis/laravel-implicit-migrations)
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/toramanlis/laravel-implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/laravel-implicit-migrations)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 [![Total Downloads](https://img.shields.io/packagist/dt/toramanlis/laravel-implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/laravel-implicit-migrations)
