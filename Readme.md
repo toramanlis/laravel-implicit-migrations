@@ -1,8 +1,8 @@
 [![codecov](https://codecov.io/gh/toramanlis/laravel-implicit-migrations/graph/badge.svg?token=BH5VBNIWMI)](https://codecov.io/gh/toramanlis/laravel-implicit-migrations)
 [![Known Vulnerabilities](https://snyk.io/test/github/toramanlis/laravel-implicit-migrations/badge.svg)](https://snyk.io/test/github/toramanlis/laravel-implicit-migrations)
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/toramanlis/implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/laravel-implicit-migrations)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/toramanlis/laravel-implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/laravel-implicit-migrations)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
-[![Total Downloads](https://img.shields.io/packagist/dt/toramanlis/laravel-implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/implicit-migrations)
+[![Total Downloads](https://img.shields.io/packagist/dt/toramanlis/laravel-implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/laravel-implicit-migrations)
 
 
 - [Overview](#overview)
@@ -220,7 +220,7 @@ return new class extends Migration
 
 # Installation
 
-The recommended installation is using `composer require --dev toramanlis/implicit-migrations` command. Since **this will make the implication attributes unavailable in production**, if you want to use attributes for implications you have to take one of the following approaches:
+The recommended installation is using `composer require --dev toramanlis/laravel-implicit-migrations` command. Since **this will make the implication attributes unavailable in production**, if you want to use attributes for implications you have to take one of the following approaches:
 
 ### Publishing The Attributes
 
@@ -245,7 +245,7 @@ Each and every one of the implications are available as both attributes and anno
 
 ### Installing To Production
 
-Alternatively, you can always install the package with `composer install toramanlis/implicit-migrations` without the `--dev` option. Having a tool like this in production sure is unnecessary, but it's just that, unnecessary.
+Alternatively, you can always install the package with `composer install toramanlis/laravel-implicit-migrations` without the `--dev` option. Having a tool like this in production sure is unnecessary, but it's just that, unnecessary.
 
 
 # Configuration
