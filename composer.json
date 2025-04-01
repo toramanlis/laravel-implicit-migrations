@@ -1,5 +1,5 @@
 {
-    "name": "toramanlis/implicit-migrations",
+    "name": "toramanlis/laravel-implicit-migrations",
     "description": "This package is a tool that creates Laravel migration files by inspecting the application's models.",
     "keywords": [
         "laravel",
@@ -43,7 +43,7 @@
         "squizlabs/php_codesniffer": "^3.12"
     },
     "prefer-stable": true,
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "funding": [
         {
             "type": "patreon",
