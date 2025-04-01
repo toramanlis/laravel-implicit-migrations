@@ -19,7 +19,7 @@
 - [Configuration](#configuration)
     - [`database.model_paths`](#databasemodel_paths)
     - [`database.auto_infer_migrations`](#databaseauto_infer_migrations)
-    - [`database.implications.<implication_name_in_snake>`](#databaseimplicationsimplication_name_in_snake)
+    - [`database.implications.<implication_name_in_snake_case>`](#databaseimplicationsimplication_name_in_snake_case)
 - [Manual Migrations](#manual-migrations)
 - [Implication Reference](#implication-reference)
     - [`Table`](#table)
@@ -262,7 +262,7 @@ An `array` of paths relative to the project directory where application models r
 
 This is a `boolean` value that controls, you guessed it, whether or not to infer the migration information automatically. What this means is basically, unless specified otherwise with an implication, none of the models, properties or methods are going to be inspected for migration information. However, if a property or method of a model has an implication, that model will be inspected. The default is `true`.
 
-## `database.implications.<implication_name_in_snake>`
+## `database.implications.<implication_name_in_snake_case>`
 ##### Type: *`bool`*
 ##### Default: *`true`*
 
