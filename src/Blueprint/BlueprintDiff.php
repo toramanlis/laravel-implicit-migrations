@@ -43,12 +43,9 @@ class BlueprintDiff implements Migratable
 
         foreach ($this->getAddedIndexes($reverse) as $index) {
             $addedIndex = $blueprint->{$index->name}($index->columns, $index->index, $index->algorithm);
-            if ($index->on) {
-                $addedIndex->on($index->on);
-            }
 
-            if ($index->references) {
-                $addedIndex->references($index->references);
+            foreach (array_keys($index->getAttributes()) as $attribute) {
+                $addedIndex->{$attribute} = $index->{$attribute};
             }
         }
 
