@@ -17,10 +17,8 @@ return new class extends Migration
     public function tableUp(Blueprint $table): void
     {
         $table->id();
-        $table->unsignedBigInteger('role_id');
+        $table->foreignId('role_id')->constrained('roles');
         $table->timestamps();
-
-        $table->foreign('role_id', 'users_role_id_foreign')->on('roles')->references('id');
     }
 
     public function up(): void

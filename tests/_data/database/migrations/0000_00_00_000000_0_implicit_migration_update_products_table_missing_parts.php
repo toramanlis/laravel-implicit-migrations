@@ -18,10 +18,13 @@ return new class extends Migration
     {
         $table->dropColumn('title');
         $table->dropColumn('sku');
+        $table->dropColumn('producer_id');
         $table->string('category')->change();
+        $table->foreignId('manufacturer')->constrained('manufacturers');
         $table->string('name')->index();
-        $table->string('manufacturer');
 
+        $table->dropForeign('products_producer_id_foreign');
+        $table->dropIndex('products_category_index');
         $table->renameIndex('products_quantity_index', 'products_stock_index');
     }
 
@@ -30,10 +33,12 @@ return new class extends Migration
         $table->dropColumn('name');
         $table->dropColumn('manufacturer');
         $table->unsignedBigInteger('category')->change();
+        $table->foreignId('producer_id')->constrained('producers');
         $table->string('title');
         $table->string('sku')->unique();
 
         $table->renameIndex('products_stock_index', 'products_quantity_index');
+        $table->index('category');
     }
 
     public function up(): void

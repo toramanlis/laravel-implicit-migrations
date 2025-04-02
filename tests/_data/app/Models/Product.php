@@ -5,6 +5,7 @@ namespace Toramanlis\Tests\Data\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
+use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
 use Toramanlis\ImplicitMigrations\Attributes\Index;
 use Toramanlis\ImplicitMigrations\Attributes\Table;
 
@@ -29,8 +30,9 @@ class Product extends Model
     #[Column('string', true, 'TorCorp')]
     public string $brand = 'TorCorp';
 
-    #[Column]
-    public string $manufacturer;
+    #[Column(unsigned: true, type: 'bigInteger')]
+    #[ForeignKey('manufacturers')]
+    public $manufacturer;
 
     public ?string $description;
 

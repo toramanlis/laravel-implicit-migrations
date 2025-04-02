@@ -17,19 +17,17 @@ return new class extends Migration
     public function tableUp(Blueprint $table): void
     {
         $table->integer('id')->primary();
-        $table->unsignedBigInteger('affiliate_id');
+        $table->foreignId('contract_code')->constrained('contracts', 'code');
+        $table->foreignId('campaign_id')->constrained('campaigns', ['code', 'id']);
+        $table->foreignId('affiliate_id')->constrained('affiliates');
         $table->unsignedBigInteger('promotion_id');
-        $table->unsignedBigInteger('campaign_id');
         $table->string('url');
         $table->string('old_url');
-        $table->unsignedBigInteger('contract_code');
 
-        $table->foreign('affiliate_id', 'links_affiliate_id_foreign')->on('affiliates')->references('id');
-        $table->foreign(['promotion_id', 'affiliate_id'], 'links_promotion_id_affiliate_id_foreign')->on('promotions')->references('id');
-        $table->foreign('campaign_id', 'links_campaign_id_foreign')->on('campaigns')->references(['code', 'id']);
-        $table->foreign('url', 'links_url_foreign')->on('redirections')->references('to');
-        $table->foreign('old_url', 'links_old_url_foreign')->on('redirections')->references('from');
-        $table->foreign('contract_code', 'links_contract_code_foreign')->on('contracts')->references('code');
+        $table->foreign(['promotion_id', 'affiliate_id'])
+            ->on('promotions')->references('id');
+        $table->foreign('url')->on('redirections')->references('to');
+        $table->foreign('old_url')->on('redirections')->references('from');
     }
 
     public function up(): void

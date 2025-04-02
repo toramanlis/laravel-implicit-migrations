@@ -283,13 +283,14 @@ class Manager
 
         static::ensureKeyColumn($blueprint, $relationship->getForeignKey(), 'unsignedBigInteger');
 
+        $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
+        $this->relationshipMap[$relationship->getParentTable()] = $relationship;
+
         if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
             /** @var Polymorphic $relationship */
             $this->ensureKeyColumn($blueprint, $relationship->getTypeKey(), 'string');
+            return;
         }
-
-        $this->relationshipMap[$relationship->getRelatedTable()] = $relationship;
-        $this->relationshipMap[$relationship->getParentTable()] = $relationship;
 
         $this->defineForeignKey(
             $relationship->getRelatedTable(),
@@ -329,13 +330,6 @@ class Manager
 
         $this->ensureKeyColumn($pivotBlueprint, $foreignKey, 'unsignedBigInteger');
         $this->ensureKeyColumn($pivotBlueprint, $targetForeignKey, 'unsignedBigInteger');
-        $this->defineForeignKey(
-            $relationship->getPivotTable(),
-            $foreignKey,
-            $blueprint->getTable(),
-            $localKey,
-            $foreignKeyAlias
-        );
 
         foreach ($relationship->pivotColumnAttributes as $attribute) {
             foreach ($pivotBlueprint->getColumns() as $column) {
@@ -347,11 +341,6 @@ class Manager
             $attribute->apply($pivotBlueprint);
         }
 
-        if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
-            /** @var Polymorphic $relationship */
-            $this->ensureKeyColumn($pivotBlueprint, $relationship->getTypeKey(), 'string');
-        }
-
         $this->relationshipMap[$targetBlueprint->getTable()] = $relationship;
         $this->ensureKeyColumn($targetBlueprint, $targetLocalKey);
 
@@ -361,6 +350,20 @@ class Manager
             $targetBlueprint->getTable(),
             $targetLocalKey,
             $targetForeignKeyAlias
+        );
+
+        if (in_array(Polymorphic::class, class_uses_recursive($relationship))) {
+            /** @var Polymorphic $relationship */
+            $this->ensureKeyColumn($pivotBlueprint, $relationship->getTypeKey(), 'string');
+            return;
+        }
+
+        $this->defineForeignKey(
+            $relationship->getPivotTable(),
+            $foreignKey,
+            $blueprint->getTable(),
+            $localKey,
+            $foreignKeyAlias
         );
     }
 

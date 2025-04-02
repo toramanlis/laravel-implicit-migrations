@@ -24,10 +24,8 @@ return new class extends Migration
         $table->string('product_id');
         $table->timestamps();
 
-        $table->primary(['old_id', 'new_id'], 'descriptions_old_id_new_id_primary');
-        $table->index(['old_id', 'product_id'], 'descriptions_old_id_product_id_index');
-        $table->foreign('describeable_id', 'descriptions_category_id_foreign')->on('categories')->references('id');
-        $table->foreign('describeable_id', 'descriptions_variant_id_foreign')->on('variants')->references('id');
+        $table->primary(['old_id', 'new_id']);
+        $table->index(['old_id', 'product_id'], 'super_cool_index_name');
     }
 
     public function up(): void

@@ -27,7 +27,7 @@ return new class extends Migration
     {
         $table->rememberToken()->nullable()->change();
 
-        $table->index('none', 'numberwangs_none_index', 'some');
+        $table->index('none', null, 'some');
 
         $table->charset('utf16');
     }

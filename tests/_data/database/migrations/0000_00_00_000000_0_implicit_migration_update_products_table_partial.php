@@ -21,9 +21,11 @@ return new class extends Migration
         $table->string('sku')->unique();
 
         $table->dropColumn('manufacturer');
+        $table->foreignId('producer_id')->constrained('producers');
 
         $table->renameIndex('products_stock_index', 'products_quantity_index');
         $table->dropIndex('products_name_index');
+        $table->index('category');
     }
 
     public function tableDown(Blueprint $table): void

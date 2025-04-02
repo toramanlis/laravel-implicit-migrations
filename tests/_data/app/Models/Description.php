@@ -9,7 +9,7 @@ use Toramanlis\ImplicitMigrations\Attributes\Table;
 
 #[Table]
 #[Primary(['old_id', 'new_id'])]
-#[Index(['old_id', 'product_id'])]
+#[Index(['old_id', 'product_id'], name: 'super_cool_index_name')]
 class Description extends Model
 {
     public $describeable_type;

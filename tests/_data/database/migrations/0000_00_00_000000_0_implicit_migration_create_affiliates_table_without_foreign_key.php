@@ -16,12 +16,12 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
+        $table->unsignedBigInteger('id')->primary();
         $table->timestamp('created_at');
         $table->timestamp('updated_at');
         $table->timestamp('deleted_at');
         $table->integer('user_id');
         $table->string('code')->nullable()->unique('affiliate_code_no_duplicate');
-        $table->unsignedBigInteger('id')->primary();
     }
 
     public function up(): void

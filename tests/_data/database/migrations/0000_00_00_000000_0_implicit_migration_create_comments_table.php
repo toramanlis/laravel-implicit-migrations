@@ -20,9 +20,6 @@ return new class extends Migration
         $table->unsignedBigInteger('commentable_id');
         $table->string('commentable_type');
         $table->timestamps();
-
-        $table->foreign('commentable_id', 'comments_category_id_foreign')->on('categories')->references('id');
-        $table->foreign('commentable_id', 'comments_variant_id_foreign')->on('variants')->references('id');
     }
 
     public function up(): void

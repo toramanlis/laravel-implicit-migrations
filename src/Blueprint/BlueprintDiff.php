@@ -34,23 +34,21 @@ class BlueprintDiff implements Migratable
 
     public function applyColumnIndexes(bool $reverse = false)
     {
+        $original = $reverse ? $this->from : $this->to;
+
         /** @var SimplifyingBlueprint */
-        $blueprint = App::make(SimplifyingBlueprint::class, ['tableName' => $this->to->getTable()]);
+        $blueprint = App::make(SimplifyingBlueprint::class, ['tableName' => ($original)->getTable()]);
 
         foreach ($this->getAddedColumns($reverse) as $column) {
             $blueprint->addColumn($column->type, $column->name, $column->getAttributes());
         }
 
         foreach ($this->getAddedIndexes($reverse) as $index) {
-            $addedIndex = $blueprint->{$index->name}($index->columns, $index->index, $index->algorithm);
+            $addedIndex = $blueprint->{$index->name}($index->columns, $this->indexName($index), $index->algorithm);
 
             foreach (array_keys($index->getAttributes()) as $attribute) {
                 $addedIndex->{$attribute} = $index->{$attribute};
             }
-        }
-
-        foreach ($this->getRenamedIndexes($reverse) as $from => $to) {
-            $blueprint->renameIndex($from, $to);
         }
 
         $blueprint->applyColumnIndexes();
@@ -200,10 +198,52 @@ class BlueprintDiff implements Migratable
                 continue;
             }
 
-            $this->addedIndexes = array_filter($this->addedIndexes, fn($i) => $i->index !== $index->index);
+            $this->addedIndexes = array_filter(
+                $this->addedIndexes,
+                fn($i) => $this->indexName($i) !== $this->indexName($index)
+            );
             return $index;
         }
 
         throw new Exception("Reference {$on}.{$reference} has no foreign key in blueprint for {$this->to->getTable()}");
+    }
+
+    public function dropAddedIndex($indexName, bool $reverse = false)
+    {
+        $remaining = [];
+
+        foreach ($this->getAddedIndexes($reverse) as $index) {
+            if ($this->indexName($index) === $indexName) {
+                continue;
+            }
+
+            $remaining[] = $index;
+        }
+
+        if ($reverse) {
+            $this->droppedIndexes = $remaining;
+        } else {
+            $this->addedIndexes = $remaining;
+        }
+    }
+
+    public function stripDefaultIndexNames(bool $reverse = false)
+    {
+        $blueprint = $reverse ? $this->from : $this->to;
+        foreach ($this->getAddedIndexes($reverse) as $index) {
+            if ($blueprint->defaultIndexName($index) === $index->index) {
+                $index->index = null;
+            }
+        }
+    }
+
+    public function indexName(Fluent $index, bool $reverse = false)
+    {
+        return $index->index ?? $this->defaultIndexName($index, $reverse);
+    }
+
+    public function defaultIndexName(Fluent $index, bool $reverse = false)
+    {
+        return ($reverse ? $this->from : $this->to)->defaultIndexName($index);
     }
 }

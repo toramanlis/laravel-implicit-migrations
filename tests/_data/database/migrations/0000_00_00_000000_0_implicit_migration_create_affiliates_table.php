@@ -16,16 +16,15 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
+        $table->unsignedBigInteger('id')->primary();
+        $table->foreignId('store_id')->constrained('stores');
         $table->timestamp('created_at');
         $table->timestamp('updated_at');
         $table->timestamp('deleted_at');
         $table->integer('user_id');
         $table->string('code')->nullable()->unique('affiliate_code_no_duplicate');
-        $table->unsignedBigInteger('id')->primary();
-        $table->unsignedBigInteger('store_id');
 
-        $table->foreign('user_id', 'affiliates_user_id_foreign')->on('users')->references('id');
-        $table->foreign('store_id', 'affiliates_store_id_foreign')->on('stores')->references('id');
+        $table->foreign('user_id')->on('users')->references('id');
     }
 
     public function up(): void

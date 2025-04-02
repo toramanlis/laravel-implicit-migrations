@@ -2,8 +2,10 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Database\Schema\ColumnDefinition;
+use Illuminate\Support\Fluent;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
@@ -17,10 +19,34 @@ class ColumnExporter extends Exporter
 
     protected ?string $collapsedType = null;
 
+    public ?Fluent $foreignKey = null;
+
     public const SUPPORTED_MODIFIERS = Column::SUPPORTED_MODIFIERS;
 
-    public function __construct(protected ColumnDefinition $definition)
+    public function __construct(public readonly ColumnDefinition $definition)
     {
+        $this->attributes = array_filter($this->definition->getAttributes());
+        unset(
+            $this->attributes['type'],
+            $this->attributes['name'],
+            $this->attributes['change'],
+            $this->attributes[IndexType::Primary->value],
+            $this->attributes[IndexType::Unique->value],
+            $this->attributes[IndexType::Index->value]
+        );
+
+        $this->runCollapsables();
+    }
+
+    public function setForeignKey(Fluent $foreignKey)
+    {
+        if ('unsignedBigInteger' !== $this->collapsedType || !empty($this->collapsedAttributes)) {
+            return false;
+        }
+
+        $foreignKey->references = 'id' === $foreignKey->references ? null : $foreignKey->references;
+        $this->foreignKey = $foreignKey;
+        return true;
     }
 
     protected function buildIndexModifiers(bool $up = true)
@@ -41,17 +67,6 @@ class ColumnExporter extends Exporter
 
     protected function exportUp(): string
     {
-        $this->attributes = array_filter($this->definition->getAttributes());
-        unset(
-            $this->attributes['type'],
-            $this->attributes['name'],
-            $this->attributes['change'],
-            $this->attributes[IndexType::Primary->value],
-            $this->attributes[IndexType::Unique->value],
-            $this->attributes[IndexType::Index->value]
-        );
-
-        $this->runCollapsables();
         $modifiers = $this->extractModifiers($this->attributes);
         $indexModifiers = $this->buildIndexModifiers();
         $collapsedModifiers = $this->extractModifiers($this->collapsedAttributes);
@@ -73,12 +88,23 @@ class ColumnExporter extends Exporter
                 $type = $this->definition->type;
             }
 
+            $modifiers = array_merge($modifiers, $indexModifiers);
+
             $parameters = in_array($type, ['id', 'rememberToken', 'softDeletes']) ? [] : [$this->definition->name];
             if ('id' === $type && 'id' !== $this->definition->name) {
                 $parameters[] = $this->definition->name;
             }
 
-            return $this->exportMethodCall($type, $parameters, array_merge($modifiers, $indexModifiers));
+            if ($this->foreignKey && 'unsignedBigInteger' === $type) {
+                $modifiers = array_merge([static::makeModifier('constrained', array_filter([
+                        $this->foreignKey->on,
+                        'id' == $this->foreignKey->references ? null : $this->foreignKey->references,
+                        $this->foreignKey->index
+                    ]))], $modifiers);
+                return $this->exportMethodCall('foreignId', $parameters, $modifiers);
+            }
+
+            return $this->exportMethodCall($type, $parameters, $modifiers);
         } else {
             return $this->exportMethodCall('addColumn', [
                 $this->definition->type,

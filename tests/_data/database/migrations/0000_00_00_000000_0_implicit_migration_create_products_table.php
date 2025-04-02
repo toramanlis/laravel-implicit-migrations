@@ -17,10 +17,10 @@ return new class extends Migration
     public function tableUp(Blueprint $table): void
     {
         $table->id('p_id');
+        $table->foreignId('manufacturer')->constrained('manufacturers');
         $table->string('name')->index();
         $table->string('category');
         $table->string('brand')->default('TorCorp')->nullable();
-        $table->string('manufacturer');
         $table->integer('stock')->index()->nullable();
         $table->timestamps();
         $table->softDeletes();

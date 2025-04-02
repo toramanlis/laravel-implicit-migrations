@@ -17,10 +17,8 @@ return new class extends Migration
     public function tableUp(Blueprint $table): void
     {
         $table->id();
-        $table->unsignedBigInteger('user_id');
+        $table->foreignId('user_id')->constrained('users');
         $table->timestamps();
-
-        $table->foreign('user_id', 'orders_user_id_foreign')->on('users')->references('id');
     }
 
     public function up(): void

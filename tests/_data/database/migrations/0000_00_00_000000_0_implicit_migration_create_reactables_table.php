@@ -16,13 +16,9 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
+        $table->foreignId('reaction_id')->constrained('reactions');
         $table->unsignedBigInteger('reactable_id');
-        $table->unsignedBigInteger('reaction_id');
         $table->string('reactable_type');
-
-        $table->foreign('reactable_id', 'reactables_comment_id_foreign')->on('comments')->references('id');
-        $table->foreign('reaction_id', 'reactables_reaction_id_foreign')->on('reactions')->references('id');
-        $table->foreign('reactable_id', 'reactables_variation_id_foreign')->on('variations')->references('id');
     }
 
     public function up(): void

@@ -33,13 +33,36 @@ class SimplifyingBlueprint extends Blueprint implements Migratable
 
             foreach ($this->columns as $column) {
                 if ($column->name === $command->columns[0]) {
-                    $defaultName = $this->createIndexName($command->name, $command->columns);
+                    $defaultName = $this->defaultIndexName($command);
                     $column->{$command->name} = $command->index === $defaultName ? true : $command->index;
-                    $this->dropIndex($command->index);
+                    $this->dropIndex($this->indexName($command));
                     break;
                 }
             }
         }
+    }
+
+    public function stripDefaultIndexNames()
+    {
+        foreach ($this->getCommands() as $command) {
+            if (!IndexType::tryFrom($command->name)) {
+                continue;
+            }
+
+            if ($this->defaultIndexName($command) === $command->index) {
+                $command->index = null;
+            }
+        }
+    }
+
+    public function defaultIndexName(Fluent $index)
+    {
+        return $this->createIndexName($index->name, $index->columns);
+    }
+
+    public function indexName(Fluent $index): string
+    {
+        return $index->index ?? $this->defaultIndexName($index);
     }
 
     public function separateIndexesFromColumns()
@@ -72,7 +95,7 @@ class SimplifyingBlueprint extends Blueprint implements Migratable
                 }
 
                 if ($column->autoIncrement || $column->primary) {
-                    $this->dropIndex($command->index);
+                    $this->dropIndex($this->indexName($command));
                 }
             }
         }
@@ -103,11 +126,20 @@ class SimplifyingBlueprint extends Blueprint implements Migratable
         $remainingColumns = [];
 
         foreach ($this->columns as $column) {
-            if (in_array($column->name, $columns)) {
+            if (!in_array($column->name, $columns)) {
+                $remainingColumns[] = $column;
                 continue;
             }
 
-            $remainingColumns[] = $column;
+            foreach ($this->commands as $command) {
+                if (null === IndexType::tryFrom($command->name)) {
+                    continue;
+                }
+
+                if (in_array($column->name, $command->columns)) {
+                    $this->dropIndex($this->indexName($command));
+                }
+            }
         }
 
         $this->columns = $remainingColumns;
@@ -134,7 +166,7 @@ class SimplifyingBlueprint extends Blueprint implements Migratable
         $this->separateIndexesFromColumns();
 
         foreach ($this->commands as $command) {
-            if (null === IndexType::tryFrom($command->name) || $command->index !== $from) {
+            if (null === IndexType::tryFrom($command->name) || $this->indexName($command) !== $from) {
                 continue;
             }
 
@@ -150,7 +182,10 @@ class SimplifyingBlueprint extends Blueprint implements Migratable
         $remainingCommands = [];
 
         foreach ($this->commands as $command) {
-            if (null !== IndexType::tryFrom($command->name) && $command->index === $index) {
+            if (
+                null !== IndexType::tryFrom($command->name) &&
+                ($this->indexName($command)) === $index
+            ) {
                 continue;
             }
 
@@ -196,7 +231,7 @@ class SimplifyingBlueprint extends Blueprint implements Migratable
                 continue;
             }
 
-            $this->dropForeign($command->index);
+            $this->dropForeign($this->indexName($command));
             return $command;
         }
 

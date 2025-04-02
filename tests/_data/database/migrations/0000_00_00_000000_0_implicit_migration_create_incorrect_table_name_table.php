@@ -16,12 +16,9 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->unsignedBigInteger('role_id');
-        $table->unsignedBigInteger('permission_id');
+        $table->foreignId('permission_id')->constrained('permissions');
+        $table->foreignId('role_id')->constrained('roles');
         $table->boolean('is_temporary');
-
-        $table->foreign('role_id', 'incorrect_table_name_role_id_foreign')->on('roles')->references('id');
-        $table->foreign('permission_id', 'incorrect_table_name_permission_id_foreign')->on('permissions')->references('id');
 
         $table->charset('idk');
     }
