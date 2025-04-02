@@ -3,11 +3,15 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
 use Illuminate\Database\Schema\ColumnDefinition;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
+use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 use Toramanlis\ImplicitMigrations\Blueprint\BlueprintDiff;
 
 class TableDiffExporter extends Exporter
 {
+    use SortsColumns;
+
     public function __construct(protected BlueprintDiff $definition)
     {
     }
@@ -65,13 +69,30 @@ class TableDiffExporter extends Exporter
      */
     protected function exportAddedColumns(bool $reverse = false): string
     {
-        $exports = [];
+        $exporters = [];
 
         foreach ($this->definition->getAddedColumns($reverse) as $column) {
-            $exports[] = ColumnExporter::exportDefinition($column);
+            /** @var ColumnExporter */
+            $exporter = App::make(ColumnExporter::class, ['definition' => $column]);
+
+            foreach ($this->definition->getAddedIndexes($reverse) as $i => $index) {
+                if (
+                    IndexType::Foreign->value === $index->name &&
+                    count($index->columns) === 1 &&
+                    $column->name === $index->columns[0]
+                ) {
+                    if ($exporter->setForeignKey($index)) {
+                        $indexName = $index->index ?? $this->definition->defaultIndexName($index, $reverse);
+                        $this->definition->dropAddedIndex($indexName, $reverse);
+                        break;
+                    }
+                }
+            }
+
+            $exporters[] = $exporter;
         }
 
-        return $this->joinExports($exports);
+        return $this->joinExports($this->getSortedExports($exporters));
     }
 
     /**
@@ -113,7 +134,9 @@ class TableDiffExporter extends Exporter
         $exports = [];
 
         foreach ($this->definition->getDroppedIndexes($reverse) as $index) {
-            $exports[] = IndexExporter::exportDefinition($index, IndexExporter::MODE_DOWN);
+            $tmp = clone $index;
+            $tmp->index = ($reverse ? $this->definition->from : $this->definition->to)->defaultIndexName($tmp);
+            $exports[] = IndexExporter::exportDefinition($tmp, IndexExporter::MODE_DOWN);
         }
 
         return $this->joinExports($exports);

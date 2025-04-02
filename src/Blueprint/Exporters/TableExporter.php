@@ -9,6 +9,8 @@ use Toramanlis\ImplicitMigrations\Blueprint\SimplifyingBlueprint;
 
 class TableExporter extends Exporter
 {
+    use SortsColumns;
+
     public function __construct(protected SimplifyingBlueprint $definition)
     {
     }
@@ -58,34 +60,42 @@ class TableExporter extends Exporter
         }
 
         $this->definition->applyColumnIndexes();
+        $this->definition->stripDefaultIndexNames();
 
+        $exporters = [];
         $softDeletes = null;
-        $ids = [];
+
         foreach ($this->definition->getColumns() as $column) {
             if ($hasTimestamps && in_array($column->name, ['created_at', 'updated_at'])) {
                 continue;
             }
 
+            /** @var ColumnExporter */
             $exporter = App::make(ColumnExporter::class, ['definition' => $column]);
-            $columnExport = $exporter->export();
+
+            foreach ($this->definition->getCommands() as $command) {
+                if (
+                    IndexType::Foreign->value === $command->name &&
+                    count($command->columns) === 1 &&
+                    $column->name === $command->columns[0]
+                ) {
+                    if ($exporter->setForeignKey($command)) {
+                        $indexName = $command->index ?? $this->definition->defaultIndexName($command);
+                        $this->definition->dropForeign($indexName);
+                        break;
+                    }
+                }
+            }
 
             if ('softDeletes' === $exporter->getCollapsedType()) {
-                $softDeletes = $columnExport;
+                $softDeletes = $exporter->export();
                 continue;
             }
 
-            if ('id' === $exporter->getCollapsedType()) {
-                if ('id' == $column->name) {
-                    array_unshift($ids, $columnExport);
-                } else {
-                    $ids[] = $columnExport;
-                }
-            } else {
-                $columnExports[] = $columnExport;
-            }
+            $exporters[] = $exporter;
         }
 
-        array_unshift($columnExports, ...$ids);
+        $columnExports = $this->getSortedExports($exporters);
 
         if ($hasTimestamps) {
             $columnExports[] = static::exportMethodCall('timestamps', $precision ? [$precision] : []);
@@ -100,6 +110,8 @@ class TableExporter extends Exporter
 
     protected function exportIndexes(): string
     {
+        $this->definition->stripDefaultIndexNames();
+
         $indexExports = [];
 
         foreach ($this->definition->getCommands() as $command) {
@@ -110,7 +122,7 @@ class TableExporter extends Exporter
             }
 
             $indexFluent = clone $command;
-            $indexFluent->name = lcfirst($type->name);
+            $indexFluent->name = $type->value;
 
             $indexExport = IndexExporter::exportDefinition($indexFluent);
 

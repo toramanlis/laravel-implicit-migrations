@@ -37,6 +37,9 @@ class IndexExporter extends Exporter
         }
 
         if (!in_array($method, ['spatialIndex', 'foreign']) && null !== $this->definition->algorithm) {
+            if (null === $this->definition->index) {
+                $parameters[] = null;
+            }
             $parameters[] = $this->definition->algorithm;
         }
 

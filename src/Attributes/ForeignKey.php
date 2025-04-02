@@ -44,7 +44,12 @@ class ForeignKey extends MigrationAttribute
     public function getReferenceTableName()
     {
         if (null === $this->referenceTableName) {
-            $this->referenceTableName = is_a($this->on, Model::class) ? $this->on->getTable() : $this->on;
+            if (is_a($this->on, Model::class, true)) {
+                $on = is_string($this->on) ? (new $this->on()) : $this->on;
+                $this->referenceTableName = $on->getTable();
+            } else {
+                $this->referenceTableName = $this->on;
+            }
         }
 
         return $this->referenceTableName;
@@ -180,6 +185,8 @@ class ForeignKey extends MigrationAttribute
 
     protected function process(Blueprint $table): Blueprint
     {
+        $this->references = empty($this->references) ? ['id'] : $this->references;
+
         $references = is_array($this->references) && count($this->references) === 1
             ? $this->references[0]
             : $this->references;

@@ -13,6 +13,8 @@ abstract class Exporter
     public const MODE_UP = 1;
     public const MODE_DOWN = 2;
 
+    protected const WRAP_LIMIT = 80;
+
     protected string $source;
 
     abstract protected function exportUp(): string;
@@ -37,7 +39,7 @@ abstract class Exporter
 
             $totalLength = array_sum(array_map('strlen', $components));
 
-            if ($totalLength > 80) {
+            if ($totalLength > static::WRAP_LIMIT) {
                 $start = "\n\t";
                 $end = ",\n";
                 $separator = ",\n\t";
@@ -48,6 +50,8 @@ abstract class Exporter
             }
 
             return "[{$start}" . implode($separator, $components) . "{$end}]";
+        } elseif (is_null($variable)) {
+            return 'null';
         }
 
         return (string) var_export($variable, true);
@@ -115,7 +119,7 @@ abstract class Exporter
 
         $totalLength = array_sum(array_map('strlen', $items));
 
-        if ($totalLength > 80) {
+        if ($totalLength > static::WRAP_LIMIT) {
             $parameters = str_replace("\n", "\n\t", implode(",\n", $items));
         } else {
             $parameters = implode(', ', $items);
@@ -137,7 +141,13 @@ abstract class Exporter
         sort($modifiers);
         $joinedModifiers = static::joinModifiers($modifiers);
         $parameters = static::exportParameters($parameters);
-        return "\$table->{$methodName}({$parameters}){$joinedModifiers};";
+        $unmodified = "\$table->{$methodName}({$parameters})";
+
+        if (strlen($unmodified) + strpos("{$joinedModifiers}\n", "\n") > static::WRAP_LIMIT) {
+            $unmodified .= "\n\t";
+        }
+
+        return "{$unmodified}{$joinedModifiers};";
     }
 
     protected static function makeModifier($name, $parameters)

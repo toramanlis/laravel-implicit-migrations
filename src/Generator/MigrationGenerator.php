@@ -103,6 +103,8 @@ class MigrationGenerator
                 /** @var BlueprintDiff $migratable */
                 $migratable->applyColumnIndexes();
                 $migratable->applyColumnIndexes(true);
+                $migratable->stripDefaultIndexNames();
+                $migratable->stripDefaultIndexNames(true);
                 $key = isset($this->existingBlueprints[$source])
                     ? $this->existingBlueprints[$source]->getTable() : $table;
                 $migrationData[$key] = $this->getMigrationItem(
