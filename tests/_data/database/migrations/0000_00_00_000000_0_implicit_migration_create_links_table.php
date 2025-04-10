@@ -24,8 +24,7 @@ return new class extends Migration
         $table->string('url');
         $table->string('old_url');
 
-        $table->foreign(['promotion_id', 'affiliate_id'])
-            ->on('promotions')->references('id');
+        $table->foreign(['promotion_id', 'affiliate_id'])->on('promotions')->references('id');
         $table->foreign('url')->on('redirections')->references('to');
         $table->foreign('old_url')->on('redirections')->references('from');
     }
