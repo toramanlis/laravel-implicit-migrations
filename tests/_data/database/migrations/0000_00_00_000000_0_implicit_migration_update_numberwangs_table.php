@@ -16,7 +16,7 @@ return new class extends Migration
 
     public function tableUp(Blueprint $table): void
     {
-        $table->rememberToken()->change();
+        $table->string('remember_token', 100)->change();
 
         $table->dropIndex('numberwangs_none_index');
 
@@ -25,7 +25,7 @@ return new class extends Migration
 
     public function tableDown(Blueprint $table): void
     {
-        $table->rememberToken()->nullable()->change();
+        $table->string('remember_token', 100)->nullable()->change();
 
         $table->index('none', null, 'some');
 

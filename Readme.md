@@ -3,6 +3,7 @@
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 [![Total Downloads](https://img.shields.io/packagist/dt/toramanlis/laravel-implicit-migrations.svg?style=flat-square)](https://packagist.org/packages/toramanlis/laravel-implicit-migrations)
 
+![Laravel Implicit Migrations](https://repository-images.githubusercontent.com/853000736/e44bfe61-b6ff-46cb-87f8-0c5b67e6c438)
 
 - [Overview](#overview)
     - [What It Is](#what-it-is)
@@ -23,6 +24,31 @@
 - [Implication Reference](#implication-reference)
     - [`Table`](#table)
     - [`Column`](#column)
+    - [`Binary`](#binary)
+    - [`Char`](#char)
+    - [`CString`](#cstring)
+    - [`Integer`](#integer)
+    - [`TinyInteger`](#tinyinteger)
+    - [`SmallInteger`](#smallinteger)
+    - [`MedumInteger`](#mediuminteger)
+    - [`BigInteger`](#biginteger)
+    - [`Increments`](#increments)
+    - [`TinyIncrements`](#tinyincrements)
+    - [`SmallIncrements`](#smallincrements)
+    - [`MedumIncrements`](#mediumincrements)
+    - [`CFloat`](#cfloat)
+    - [`Decimal`](#decimal)
+    - [`dateTime`](#datetime)
+    - [`dateTimeTz`](#datetimetz)
+    - [`time`](#time)
+    - [`timeTz`](#timetz)
+    - [`Timestamp`](#timestamp)
+    - [`TimestampTz`](#timestamptz)
+    - [`Enum`](#enum)
+    - [`Set`](#set)
+    - [`Geometry`](#geometry)
+    - [`Geography`](#geography)
+    - [`Computed`](#computed)
     - [`Index`](#index)
     - [`Unique`](#unique)
     - [`Primary`](#primary)
@@ -299,6 +325,285 @@ Used with classes for specifying the table details. When the `database.auto_infe
 `Column(?string $type = null, ?string $name = null, ?bool $nullable = null, $default = null, ?int $length = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?int $precision = null, ?int $total = null, ?int $places = null, ?array $allowed = null, ?bool $fixed = null, ?string $subtype = null, ?int $srid = null, ?string $expression = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
 
 Can be used both on classes and properties to define columns. The `name` parameter is mandatory when used on classes as it won't be able to infer the column name. In contrast, when used on a property, column name defaults to the name of the property. Either by using it on a property or providing a `name` that matches a property allows it to infer whatever information available in the definition of said property.
+
+
+## `Binary`
+
+##### Target: *`class`*, *`property`*
+
+`Binary(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $fixed = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('binary', $name, $nullable, $default, fixed: $fixed, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Char`
+
+##### Target: *`class`*, *`property`*
+
+`Char(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $length = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('char', $name, $nullable, $default, $length, collation: $collation, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `CString`
+
+##### Target: *`class`*, *`property`*
+
+`CString(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $length = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('string', $name, $nullable, $default, $length, collation: $collation, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Integer`
+
+##### Target: *`class`*, *`property`*
+
+`Integer(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('integer', $name, $nullable, $default, unsigned: $unsigned, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `TinyInteger`
+
+##### Target: *`class`*, *`property`*
+
+`TinyInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('tinyInteger', $name, $nullable, $default, unsigned: $unsigned, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `SmallInteger`
+
+##### Target: *`class`*, *`property`*
+
+`SmallInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('smallInteger', $name, $nullable, $default, unsigned: $unsigned, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `MediumInteger`
+
+##### Target: *`class`*, *`property`*
+
+`MediumInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('mediumInteger', $name, $nullable, $default, unsigned: $unsigned, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `BigInteger`
+
+##### Target: *`class`*, *`property`*
+
+`BigInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $unsigned = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('bigInteger', $name, $nullable, $default, unsigned: $unsigned, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `UnsignedInteger`
+
+##### Target: *`class`*, *`property`*
+
+`UnsignedInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('unsignedInteger', $name, $nullable, $default, unsigned: true, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `UnsignedTinyInteger`
+
+##### Target: *`class`*, *`property`*
+
+`UnsignedTinyInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('unsignedTinyInteger', $name, $nullable, $default, unsigned: true, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `UnsignedSmallInteger`
+
+##### Target: *`class`*, *`property`*
+
+`UnsignedSmallInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('unsignedSmallInteger', $name, $nullable, $default, unsigned: true, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `UnsignedMediumInteger`
+
+##### Target: *`class`*, *`property`*
+
+`UnsignedMediumInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('unsignedMediumInteger', $name, $nullable, $default, unsigned: true, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `UnsignedBigInteger`
+
+##### Target: *`class`*, *`property`*
+
+`UnsignedBigInteger(protected ?string $name = null, ?bool $nullable = null, $default = null, ?bool $autoIncrement = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('unsignedBigInteger', $name, $nullable, $default, unsigned: true, autoIncrement: $autoIncrement, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Increments`
+
+##### Target: *`class`*, *`property`*
+
+`Increments(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('increments', $name, $nullable, $default, unsigned: true, autoIncrement: true, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `TinyIncrements`
+
+##### Target: *`class`*, *`property`*
+
+`TinyIncrements(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('tinyIncrements', $name, $nullable, $default, unsigned: true, autoIncrement: true, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `SmallIncrements`
+
+##### Target: *`class`*, *`property`*
+
+`SmallIncrements(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('smallIncrements', $name, $nullable, $default, unsigned: true, autoIncrement: true, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `MediumIncrements`
+
+##### Target: *`class`*, *`property`*
+
+`MediumIncrements(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('mediumIncrements', $name, $nullable, $default, unsigned: true, autoIncrement: true, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `BigIncrements`
+
+##### Target: *`class`*, *`property`*
+
+`BigIncrements(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('bigIncrements', $name, $nullable, $default, unsigned: true, autoIncrement: true, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `CFloat`
+
+##### Target: *`class`*, *`property`*
+
+`CFloat(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('float', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Decimal`
+
+##### Target: *`class`*, *`property`*
+
+`Decimal(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $total = null, ?int $places = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('decimal', $name, $nullable, $default, total: $total, places: $places, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `DateTime`
+
+##### Target: *`class`*, *`property`*
+
+`DateTime(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('dateTime', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `DateTimeTz`
+
+##### Target: *`class`*, *`property`*
+
+`DateTimeTz(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('dateTimeTz', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Time`
+
+##### Target: *`class`*, *`property`*
+
+`Time(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('time', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `TimeTz`
+
+##### Target: *`class`*, *`property`*
+
+`TimeTz(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('timeTz', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Timestamp`
+
+##### Target: *`class`*, *`property`*
+
+`Timestamp(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('timestamp', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `TimestampTz`
+
+##### Target: *`class`*, *`property`*
+
+`TimestampTz(protected ?string $name = null, ?bool $nullable = null, $default = null, ?int $precision = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('timestampTz', $name, $nullable, $default, precision: $precision, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Enum`
+
+##### Target: *`class`*, *`property`*
+
+`Enum(protected ?string $name = null, ?bool $nullable = null, $default = null, ?array $allowed = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('enum', $name, $nullable, $default, allowed: $allowed, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Set`
+
+##### Target: *`class`*, *`property`*
+
+`Set(protected ?string $name = null, ?bool $nullable = null, $default = null, ?array $allowed = null, ?string $collation = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('set', $name, $nullable, $default, allowed: $allowed, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Geometry`
+
+##### Target: *`class`*, *`property`*
+
+`Geometry(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $subtype = null, ?int $srid = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('geometry', $name, $nullable, $default, subtype: $subtype, srid: $srid, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Geography`
+
+##### Target: *`class`*, *`property`*
+
+`Geography(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $subtype = null, ?int $srid = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('geography', $name, $nullable, $default, subtype: $subtype, srid: $srid, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
+
+
+## `Computed`
+
+##### Target: *`class`*, *`property`*
+
+`Computed(protected ?string $name = null, ?bool $nullable = null, $default = null, ?string $expression = null, ?string $comment = null, ?string $virtualAs = null, ?string $storedAs = null, ?string $after = null)`
+
+Alias for `Column('computed', $name, $nullable, $default, expression: $expression, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
 
 
 ## `Index`

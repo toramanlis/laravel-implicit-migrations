@@ -24,6 +24,6 @@ abstract class MigrationAttribute
     public static function enabled(): bool
     {
         $key = Str::snake(last(explode('\\', static::class)));
-        return Config::get("database.implications.{$key}", false);
+        return Config::get("database.implications.{$key}", true);
     }
 }

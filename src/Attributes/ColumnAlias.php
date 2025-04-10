@@ -2,15 +2,12 @@
 
 namespace Toramanlis\ImplicitMigrations\Attributes;
 
-use Attribute;
-use ReflectionProperty;
-
-#[Attribute(Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
-class PivotColumn extends Column
+abstract class ColumnAlias extends Column
 {
+    protected const TYPE = null;
+
     public function __construct(
-        ?string $name,
-        protected ?string $type = null,
+        protected ?string $name = null,
         protected ?bool $nullable = null,
         protected $default = null,
         protected ?int $length = null,
@@ -31,7 +28,7 @@ class PivotColumn extends Column
         protected ?string $after = null
     ) {
         parent::__construct(
-            $type,
+            static::TYPE,
             $name,
             $nullable,
             $default,
@@ -52,15 +49,5 @@ class PivotColumn extends Column
             $storedAs,
             $after
         );
-    }
-
-    public function getName(): string
-    {
-        return $this->name ?? '';
-    }
-
-    public function inferFromReflectionProperty(ReflectionProperty $reflection): void
-    {
-        return;
     }
 }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\ForeignKey;
-use Toramanlis\ImplicitMigrations\Attributes\Off;
+use Toramanlis\ImplicitMigrations\Attributes\Char;
 use Toramanlis\ImplicitMigrations\Attributes\Primary;
 use Toramanlis\ImplicitMigrations\Attributes\Unique;
 
@@ -23,7 +23,7 @@ class Affiliate extends Model
 
     public $incrementing = false;
 
-    #[Column]
+    #[Column(length: 10)]
     #[ForeignKey(on: 'users', references: 'id', column: ['user_id'])]
     public int $user_id;
 
@@ -33,4 +33,7 @@ class Affiliate extends Model
     #[Unique(name: 'affiliate_code_no_duplicate')]
     #[Column(type: 'string', nullable: true, default: '')]
     public $code;
+
+    #[Char]
+    public $tier;
 }

@@ -21,8 +21,9 @@ return new class extends Migration
         $table->timestamp('created_at');
         $table->timestamp('updated_at');
         $table->timestamp('deleted_at');
-        $table->integer('user_id');
+        $table->addColumn('integer', 'user_id', ['length' => 10]);
         $table->string('code')->nullable()->unique('affiliate_code_no_duplicate');
+        $table->char('tier');
 
         $table->foreign('user_id')->on('users')->references('id');
     }
