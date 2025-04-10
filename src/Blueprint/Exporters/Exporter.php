@@ -13,7 +13,7 @@ abstract class Exporter
     public const MODE_UP = 1;
     public const MODE_DOWN = 2;
 
-    protected const WRAP_LIMIT = 80;
+    protected const WRAP_LIMIT = 120;
 
     protected string $source;
 

@@ -11,6 +11,12 @@ use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
 class ColumnExporter extends Exporter
 {
+    protected const PARAMETER_DEFAULTS = [
+        'float' => ['precision' => 53],
+        'decimal' => ['places' => 2, 'total' => 8],
+        'geography' => ['srid' => 4326, 'subtype' => null],
+    ];
+
     /** @var array<string,mixed> */
     protected array $attributes;
 
@@ -65,11 +71,55 @@ class ColumnExporter extends Exporter
         return $modifiers;
     }
 
+    protected function getParameters(): array
+    {
+        $parameters = [];
+        foreach (Column::PARAMETER_MAP[$this->definition->type] ?? [] as $parameterName) {
+            $parameters[$parameterName] = $this->attributes[$parameterName] ?? null;
+        }
+
+        foreach (array_reverse($parameters) as $parameterName => $value) {
+            if (is_null($value)) {
+                unset($parameters[$parameterName]);
+            } else {
+                break;
+            }
+        }
+
+        return $parameters;
+    }
+
+    protected function removeDefaultParameters(&$parameters)
+    {
+        switch ($this->definition->type) {
+            case 'char':
+            case 'string':
+                if ($this->definition->length === Builder::$defaultStringLength) {
+                    unset($parameters['length']);
+                }
+                break;
+            case 'time':
+            case 'timeTz':
+            case 'timestamp':
+            case 'timestampTz':
+            case 'dateTime':
+            case 'dateTimeTz':
+                if ($this->definition->precision === Builder::$defaultTimePrecision) {
+                    unset($parameters['precision']);
+                }
+                break;
+            default:
+                foreach (static::PARAMETER_DEFAULTS[$this->definition->type] ?? [] as $name => $value) {
+                    if (($parameters[$name] ?? []) === $value) {
+                        unset($parameters[$name]);
+                    }
+                }
+        }
+    }
+
     protected function exportUp(): string
     {
-        $modifiers = $this->extractModifiers($this->attributes);
         $indexModifiers = $this->buildIndexModifiers();
-        $collapsedModifiers = $this->extractModifiers($this->collapsedAttributes);
 
         if (
             in_array($this->definition->type, ['char', 'string']) &&
@@ -78,17 +128,9 @@ class ColumnExporter extends Exporter
             unset($this->attributes['length']);
         }
 
-        $isCollapsable = null !== $this->collapsedType && empty($this->collapsedAttributes);
-
-        if (empty($this->attributes) || $isCollapsable) {
-            if ($isCollapsable) {
-                $type = $this->collapsedType;
-                $modifiers = $collapsedModifiers;
-            } else {
-                $type = $this->definition->type;
-            }
-
-            $modifiers = array_merge($modifiers, $indexModifiers);
+        if (null !== $this->collapsedType && empty($this->collapsedAttributes)) {
+            $type = $this->collapsedType;
+            $modifiers = array_merge($this->extractModifiers($this->collapsedAttributes), $indexModifiers);
 
             $parameters = in_array($type, ['id', 'rememberToken', 'softDeletes']) ? [] : [$this->definition->name];
             if ('id' === $type && 'id' !== $this->definition->name) {
@@ -106,11 +148,20 @@ class ColumnExporter extends Exporter
 
             return $this->exportMethodCall($type, $parameters, $modifiers);
         } else {
+            $parameters = $this->getParameters();
+            $modifiers = array_merge($this->extractModifiers($this->attributes), $indexModifiers);
+
+            if (empty(array_diff(array_keys($this->attributes), array_keys($parameters)))) {
+                array_unshift($parameters, $this->definition->name);
+                $this->removeDefaultParameters($parameters);
+                return $this->exportMethodCall($this->definition->type, $parameters, $modifiers);
+            }
+
             return $this->exportMethodCall('addColumn', [
                 $this->definition->type,
                 $this->definition->name,
                 $this->attributes,
-            ], array_merge($modifiers, $indexModifiers));
+            ], $modifiers);
         }
     }
 
@@ -219,7 +270,11 @@ class ColumnExporter extends Exporter
             return;
         }
 
-        if (100 === ($this->collapsedAttributes['length'] ?? null) && 'remember_token' === $this->definition->name) {
+        if (
+            100 === ($this->collapsedAttributes['length'] ?? null) &&
+            'remember_token' === $this->definition->name &&
+            $this->definition->nullable
+        ) {
             $this->collapsedType = 'rememberToken';
             unset($this->collapsedAttributes['length']);
         }
