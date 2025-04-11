@@ -49,7 +49,7 @@ return new class extends Migration
         $table->dateTimeTz('date_time_tz');
         $table->decimal('decimal', 4);
         $table->enum('enum', ['a', 'b']);
-        $table->geography('geography', null, 4325);
+        $table->geography('geography', srid: 4325);
         $table->geometry('geometry');
         $table->set('set', ['a', 'b']);
         $table->time('time');

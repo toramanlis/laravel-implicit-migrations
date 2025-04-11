@@ -111,11 +111,18 @@ abstract class Exporter
 
     protected static function exportParameters(array $parameters): string
     {
-        $items = [];
+        $positionals = [];
+        $nameds = [];
 
-        foreach ($parameters as $value) {
-            $items[] = static::varExport($value, true);
+        foreach ($parameters as $key => $value) {
+            if (is_int($key)) {
+                $positionals[] = static::varExport($value, true);
+            } else {
+                $nameds[] = "{$key}: " . static::varExport($value, true);
+            }
         }
+
+        $items = array_merge($positionals, $nameds);
 
         $totalLength = array_sum(array_map('strlen', $items));
 

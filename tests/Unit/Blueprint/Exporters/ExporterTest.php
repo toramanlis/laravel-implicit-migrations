@@ -55,4 +55,17 @@ class ExporterTest extends BaseTestCase
 
         $this->assertStringContainsString("\n\t->", $result);
     }
+
+    public function testSortsParameters()
+    {
+        /** @var ColumnExporter */
+        $exporter = $this->make(ColumnExporter::class);
+
+        $reflectionMethod = new ReflectionMethod(ColumnExporter::class, 'exportParameters');
+        $reflectionMethod->setAccessible(true);
+
+        $result = $reflectionMethod->invoke($exporter, ['a', 'b', 'c' => 'd', 'e']);
+
+        $this->assertEquals("'a', 'b', 'e', c: 'd'", $result);
+    }
 }

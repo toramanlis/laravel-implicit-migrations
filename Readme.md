@@ -26,7 +26,7 @@
     - [`Column`](#column)
     - [`Binary`](#binary)
     - [`Char`](#char)
-    - [`CString`](#cstring)
+    - [`CString`](#cstring "`String` is a reserved word in PHP")
     - [`Integer`](#integer)
     - [`TinyInteger`](#tinyinteger)
     - [`SmallInteger`](#smallinteger)
@@ -36,7 +36,7 @@
     - [`TinyIncrements`](#tinyincrements)
     - [`SmallIncrements`](#smallincrements)
     - [`MedumIncrements`](#mediumincrements)
-    - [`CFloat`](#cfloat)
+    - [`CFloat`](#cfloat "`Float` is a reserved word in PHP")
     - [`Decimal`](#decimal)
     - [`DateTime`](#datetime)
     - [`DateTimeTz`](#datetimetz)
@@ -345,7 +345,7 @@ Alias for `Column('binary', $name, $nullable, $default, fixed: $fixed, comment: 
 Alias for `Column('char', $name, $nullable, $default, $length, collation: $collation, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
 
 
-## `CString`
+## [`CString`](## "`String` is a reserved wordin PHP")
 
 ##### Target: *`class`*, *`property`*
 
@@ -489,7 +489,7 @@ Alias for `Column('mediumIncrements', $name, $nullable, $default, unsigned: true
 Alias for `Column('bigIncrements', $name, $nullable, $default, unsigned: true, autoIncrement: true, comment: $comment, virtualAs: $virtualAs, storedAs: $storedAs, after: $after)`
 
 
-## `CFloat`
+## [`CFloat`](## "`Float` is a reserved wordin PHP")
 
 ##### Target: *`class`*, *`property`*
 

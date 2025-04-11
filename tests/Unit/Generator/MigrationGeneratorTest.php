@@ -39,20 +39,14 @@ class MigrationGeneratorTest extends BaseTestCase
         $a->foreign('b_id', 'a_b_id')->on('bs')->references(['id']);
 
         $_b = new SimplifyingBlueprint('bs');
-        $b = new BlueprintDiff(
-            new SimplifyingBlueprint('bs'),
-            $_b,
-            [],
-            [],
-            [$_b->id(), $_b->integer('c_id'), $_b->integer('d_id')],
-            [],
-            [],
-            [
-                $_b->index(['c_id'], 'b_c_i'),
-                $_b->foreign('c_id', 'b_c_id')->on('cs')->references(['id']),
-                $_b->foreign('d_id', 'b_d_id')->on('ds')->references(['id']),
-            ]
-        );
+        $b = new BlueprintDiff(new SimplifyingBlueprint('bs'), $_b);
+
+        $b->addedColumns = [$_b->id(), $_b->integer('c_id'), $_b->integer('d_id')];
+        $b->addedIndexes = [
+            $_b->index(['c_id'], 'b_c_i'),
+            $_b->foreign('c_id', 'b_c_id')->on('cs')->references(['id']),
+            $_b->foreign('d_id', 'b_d_id')->on('ds')->references(['id']),
+        ];
 
         $c = new SimplifyingBlueprint('cs');
         $c->id();

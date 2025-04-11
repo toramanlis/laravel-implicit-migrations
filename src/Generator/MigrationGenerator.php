@@ -188,14 +188,10 @@ class MigrationGenerator
             $extraMigratable = App::make(BlueprintDiff::class, [
                 'from' => App::make(SimplifyingBlueprint::class, ['tableName' => $biggestDependent['table']]),
                 'to' => App::make(SimplifyingBlueprint::class, ['tableName' => $biggestDependent['table']]),
-                'modifiedColumns' => [],
-                'droppedColumns' => [],
-                'addedColumns' => [],
-                'droppedIndexes' => [],
-                'renamedIndexes' => [],
-                'addedIndexes' => [],
-                'addedIndexes' => [$migratables[$biggestDependent['table']]->extractForeignKey($on, $shortColumn)],
             ]);
+            $extraMigratable->addedIndexes = [
+                $migratables[$biggestDependent['table']]->extractForeignKey($on, $shortColumn)
+            ];
             $extraMigratables['_' . $biggestDependent['table']] = $extraMigratable;
         }
 

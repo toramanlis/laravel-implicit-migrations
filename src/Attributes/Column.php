@@ -90,7 +90,6 @@ class Column extends MigrationAttribute
         'collation',
     ];
 
-
     protected bool $inferred = false;
 
     public function __construct(
@@ -165,6 +164,20 @@ class Column extends MigrationAttribute
         }
     }
 
+    public static function getParameters($type, $attributes): array
+    {
+        $parameters = [];
+        foreach (static::PARAMETER_MAP[$type] ?? [] as $parameterName) {
+            if (!array_key_exists($parameterName, $attributes)) {
+                continue;
+            }
+
+            $parameters[$parameterName] = $attributes[$parameterName];
+        }
+
+        return $parameters;
+    }
+
     protected function process(Blueprint $table): Blueprint
     {
         try {
@@ -194,14 +207,7 @@ class Column extends MigrationAttribute
             $attributes[$attributeName] = $this->{$attributeName};
         }
 
-        $parameters = [];
-        foreach (static::PARAMETER_MAP[$this->type] ?? [] as $parameterName) {
-            if (!isset($attributes[$parameterName])) {
-                continue;
-            }
-
-            $parameters[$parameterName] = $attributes[$parameterName];
-        }
+        $parameters = static::getParameters($this->type, $attributes);
 
         if (
             !empty(array_diff(
