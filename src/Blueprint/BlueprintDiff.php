@@ -3,6 +3,7 @@
 namespace Toramanlis\ImplicitMigrations\Blueprint;
 
 use Exception;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Fluent;
@@ -11,25 +12,45 @@ use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 class BlueprintDiff implements Migratable
 {
     /**
+     * @param array<string>
+     */
+    public array $modifiedColumns;
+
+    /**
+     * @param array<ColumnDefinition> $droppedColumns
+     */
+    public array $droppedColumns;
+
+    /**
+     * @param array<ColumnDefinition> $addedColumns
+     */
+    public array $addedColumns;
+
+    /**
+     * @param array<Fluent> $droppedIndexes
+     */
+    public array $droppedIndexes;
+
+    /**
+     * @param array<string, string> $renamedIndexes
+     */
+    public array $renamedIndexes;
+
+    /**
+     * @param array<Fluent> $addedIndexes
+     */
+    public array $addedIndexes;
+
+    /**
      * @param SimplifyingBlueprint $from
      * @param SimplifyingBlueprint $to
-     * @param array<string> $modifiedColumns
-     * @param array<ColumnDefinition> $droppedColumns
-     * @param array<ColumnDefinition> $addedColumns
-     * @param array<Fluent> $droppedIndexes
-     * @param array<string, string> $renamedIndexes
-     * @param array<Fluent> $addedIndexes
      */
     public function __construct(
         readonly public SimplifyingBlueprint $from,
-        readonly public SimplifyingBlueprint $to,
-        public array $modifiedColumns,
-        public array $droppedColumns,
-        public array $addedColumns,
-        public array $droppedIndexes,
-        public array $renamedIndexes,
-        public array $addedIndexes
+        readonly public SimplifyingBlueprint $to
     ) {
+        [$this->modifiedColumns, $this->droppedColumns, $this->addedColumns] = static::getColumnDiffs($from, $to);
+        [$this->droppedIndexes, $this->renamedIndexes, $this->addedIndexes] = static::getIndexDiffs($from, $to);
     }
 
     public function applyColumnIndexes(bool $reverse = false)
@@ -245,5 +266,127 @@ class BlueprintDiff implements Migratable
     public function defaultIndexName(Fluent $index, bool $reverse = false)
     {
         return ($reverse ? $this->from : $this->to)->defaultIndexName($index);
+    }
+
+    protected static function attributesEqual(Fluent $left, Fluent $right, array $exceptions = [])
+    {
+        $leftClone = clone $left;
+        $rightClone = clone $right;
+
+        $leftAttributes = array_filter($leftClone->getAttributes(), fn ($i) => null !== $i);
+        $rightAttributes = array_filter($rightClone->getAttributes(), fn ($i) => null !== $i);
+
+        ksort($leftAttributes);
+        ksort($rightAttributes);
+
+        foreach ($exceptions as $exception) {
+            unset($leftAttributes[$exception], $rightAttributes[$exception]);
+        }
+
+        return $leftAttributes === $rightAttributes;
+    }
+
+    /**
+     * @param Blueprint $from
+     * @param Blueprint $to
+     * @return array
+     */
+    protected static function getColumnDiffs(Blueprint $from, Blueprint $to): array
+    {
+        $unchangedColumns = [];
+        $modifiedColumns = [];
+        $droppedColumns = [];
+        $addedColumns = [];
+
+        foreach ($from->getColumns() as $fromColumn) {
+            foreach ($to->getColumns() as $toColumn) {
+                if (in_array($toColumn->name, $unchangedColumns)) {
+                    continue;
+                }
+
+                if ($fromColumn->name === $toColumn->name) {
+                    if (static::attributesEqual($fromColumn, $toColumn)) {
+                        $unchangedColumns[] = $fromColumn->name;
+                        continue 2;
+                    }
+
+                    $modifiedColumns[] = $fromColumn->name;
+                    continue 2;
+                }
+            }
+
+            $droppedColumns[] = $fromColumn;
+        }
+
+        foreach ($to->getColumns() as $toColumn) {
+            if (
+                in_array($toColumn->name, $unchangedColumns) ||
+                in_array($toColumn->name, $modifiedColumns)
+            ) {
+                continue;
+            }
+
+            $addedColumns[] = $toColumn;
+        }
+
+        return [$modifiedColumns, $droppedColumns, $addedColumns];
+    }
+
+    /**
+     * @param Blueprint $from
+     * @param Blueprint $to
+     * @return array
+     */
+    protected static function getIndexDiffs(Blueprint $from, Blueprint $to): array
+    {
+        $unchangedIndexes = [];
+        $droppedIndexes = [];
+        $renamedIndexes = [];
+        $addedIndexes = [];
+
+        foreach ($from->getCommands() as $fromCommand) {
+            if (null === IndexType::tryFrom($fromCommand->name)) {
+                continue;
+            }
+
+            foreach ($to->getCommands() as $toCommand) {
+                if (
+                    null === IndexType::tryFrom($toCommand->name) ||
+                    in_array($toCommand->index, $unchangedIndexes)
+                ) {
+                    continue;
+                }
+
+                if (static::attributesEqual($fromCommand, $toCommand, ['index'])) {
+                    if ($fromCommand->index === $toCommand->index) {
+                        unset($renamedIndexes[$fromCommand->index]);
+                        $unchangedIndexes[] = $fromCommand->index;
+                        continue 2;
+                    }
+
+                    $renamedIndexes[$fromCommand->index] = $toCommand->index;
+                    continue 2;
+                }
+            }
+
+            $droppedIndexes[] = $fromCommand;
+        }
+
+        foreach ($to->getCommands() as $toCommand) {
+            if (null === IndexType::tryFrom($toCommand->name)) {
+                continue;
+            }
+
+            if (
+                in_array($toCommand->index, $unchangedIndexes) ||
+                in_array($toCommand->index, $renamedIndexes)
+            ) {
+                continue;
+            }
+
+            $addedIndexes[] = $toCommand;
+        }
+
+        return [$droppedIndexes, $renamedIndexes, $addedIndexes];
     }
 }

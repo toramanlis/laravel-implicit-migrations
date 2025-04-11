@@ -2,20 +2,17 @@
 
 namespace Toramanlis\ImplicitMigrations\Blueprint\Exporters;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Fluent;
+use ReflectionMethod;
 use Toramanlis\ImplicitMigrations\Attributes\Column;
 use Toramanlis\ImplicitMigrations\Attributes\IndexType;
 
 class ColumnExporter extends Exporter
 {
-    protected const PARAMETER_DEFAULTS = [
-        'float' => ['precision' => 53],
-        'decimal' => ['places' => 2, 'total' => 8],
-        'geography' => ['srid' => 4326, 'subtype' => null],
-    ];
+    protected static $parameterDefaults = [];
 
     /** @var array<string,mixed> */
     protected array $attributes;
@@ -55,7 +52,7 @@ class ColumnExporter extends Exporter
         return true;
     }
 
-    protected function buildIndexModifiers(bool $up = true)
+    protected function buildIndexModifiers()
     {
         $modifiers = [];
 
@@ -71,62 +68,91 @@ class ColumnExporter extends Exporter
         return $modifiers;
     }
 
-    protected function getParameters(): array
+    protected static function getParameterDefaults($type)
     {
-        $parameters = [];
-        foreach (Column::PARAMETER_MAP[$this->definition->type] ?? [] as $parameterName) {
-            $parameters[$parameterName] = $this->attributes[$parameterName] ?? null;
+        if (isset(static::$parameterDefaults[$type])) {
+            return static::$parameterDefaults[$type];
         }
 
-        foreach (array_reverse($parameters) as $parameterName => $value) {
-            if (is_null($value)) {
-                unset($parameters[$parameterName]);
-            } else {
-                break;
-            }
-        }
-
-        return $parameters;
-    }
-
-    protected function removeDefaultParameters(&$parameters)
-    {
-        switch ($this->definition->type) {
+        switch ($type) {
             case 'char':
             case 'string':
-                if ($this->definition->length === Builder::$defaultStringLength) {
-                    unset($parameters['length']);
-                }
-                break;
+                static::$parameterDefaults['string'] = ['length' => Builder::$defaultStringLength];
+                return static::$parameterDefaults['string'];
             case 'time':
             case 'timeTz':
             case 'timestamp':
             case 'timestampTz':
             case 'dateTime':
             case 'dateTimeTz':
-                if ($this->definition->precision === Builder::$defaultTimePrecision) {
-                    unset($parameters['precision']);
-                }
+                static::$parameterDefaults[$type] = ['precision' => Builder::$defaultTimePrecision];
+                return static::$parameterDefaults[$type];
+            case 'float':
+                $argumentNames = ['precision'];
+                break;
+            case 'decimal':
+                $argumentNames = ['total', 'places'];
+                break;
+            case 'geography':
+                $argumentNames = ['subtype', 'srid'];
                 break;
             default:
-                foreach (static::PARAMETER_DEFAULTS[$this->definition->type] ?? [] as $name => $value) {
-                    if (($parameters[$name] ?? []) === $value) {
-                        unset($parameters[$name]);
-                    }
-                }
+                static::$parameterDefaults[$type] = [];
+                return static::$parameterDefaults[$type];
         }
+
+        $reflectionMethod = new ReflectionMethod(Blueprint::class, $type);
+        $reflectionParameters = $reflectionMethod->getParameters();
+
+        static::$parameterDefaults[$type] = [];
+        foreach ($reflectionParameters as $reflectionParameter) {
+            $argumentName = $reflectionParameter->getName();
+
+            if (!$reflectionParameter->isDefaultValueAvailable() || !in_array($argumentName, $argumentNames)) {
+                continue;
+            }
+
+            static::$parameterDefaults[$type][$argumentName] = $reflectionParameter->getDefaultValue();
+        }
+
+        return static::$parameterDefaults[$type];
+    }
+
+    public static function removeDefaultParameters($type, $parameters)
+    {
+        $cleaned = [];
+        $defaults = static::getParameterDefaults($type);
+
+        foreach ($defaults as $key => $value) {
+            if (array_key_exists($key, $parameters)) {
+                $value = $parameters[$key];
+                unset($parameters[$key]);
+            }
+
+            $parameters[$key] = $value;
+        }
+
+        $canBePositional = true;
+
+        foreach ($parameters as $key => $value) {
+            if (array_key_exists($key, $defaults) && $defaults[$key] === $value) {
+                $canBePositional = false;
+                continue;
+            }
+
+            if ($canBePositional) {
+                $cleaned[] = $value;
+            } else {
+                $cleaned[$key] = $value;
+            }
+        }
+
+        return $cleaned;
     }
 
     protected function exportUp(): string
     {
         $indexModifiers = $this->buildIndexModifiers();
-
-        if (
-            in_array($this->definition->type, ['char', 'string']) &&
-            $this->definition->length === Builder::$defaultStringLength
-        ) {
-            unset($this->attributes['length']);
-        }
 
         if (null !== $this->collapsedType && empty($this->collapsedAttributes)) {
             $type = $this->collapsedType;
@@ -148,12 +174,12 @@ class ColumnExporter extends Exporter
 
             return $this->exportMethodCall($type, $parameters, $modifiers);
         } else {
-            $parameters = $this->getParameters();
+            $parameters = Column::getParameters($this->definition->type, $this->attributes);
             $modifiers = array_merge($this->extractModifiers($this->attributes), $indexModifiers);
 
             if (empty(array_diff(array_keys($this->attributes), array_keys($parameters)))) {
                 array_unshift($parameters, $this->definition->name);
-                $this->removeDefaultParameters($parameters);
+                $parameters = static::removeDefaultParameters($this->definition->type, $parameters);
                 return $this->exportMethodCall($this->definition->type, $parameters, $modifiers);
             }
 
